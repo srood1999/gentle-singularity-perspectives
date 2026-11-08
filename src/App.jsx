@@ -28,7 +28,7 @@ import {
 export default function App() {
   // Selected IDs for each of the 4 Dropdowns (50 + 50 + 50 + 100 = 250 voices)
   const [selectedFour, setSelectedFour] = useState({
-    accelerationist: TOP_50_ACCELERATIONISTS[0].id, // #1 Elon Musk
+    accelerationist: TOP_50_ACCELERATIONISTS[0].id, // #1 Jensen Huang
     pragmatist: TOP_50_PRAGMATISTS[0].id,           // #1 Sam Altman
     pessimist: TOP_50_PESSIMISTS[0].id,             // #1 Geoffrey Hinton
     philosopher: TOP_100_PHILOSOPHERS[0].id         // #1 Jesus of Nazareth

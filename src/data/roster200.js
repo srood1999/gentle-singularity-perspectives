@@ -1,13 +1,13 @@
 // Complete dataset of 250 voices ranked by current public prominence in each pillar:
-// - Top 50 Accelerationists (e/acc & Techno-Optimists) — led by Elon Musk, Jensen Huang, Marc Andreessen, Peter Diamandis, Ray Kurzweil
+// - Top 50 Accelerationists (e/acc & Techno-Optimists) — led by Jensen Huang, Elon Musk, Marc Andreessen, Peter Diamandis, Ray Kurzweil
 // - Top 50 Middle-Ground Pragmatists — led by Sam Altman, Dario Amodei, Satya Nadella, Sundar Pichai, Bill Gates, Demis Hassabis
 // - Top 50 P(doom) Pessimists & AI Safety Critics — led by Geoffrey Hinton, Yuval Noah Harari, Edward Snowden, Noam Chomsky, Ilya Sutskever, Eliezer Yudkowsky
 // - Top 100 Thinkers, Spiritual Leaders & Philosophers — led by the most globally recognized spiritual & philosophical figures, including Baruch Spinoza & Isaac Asimov in the Top 10
 
 // 1. TOP 50 ACCELERATIONISTS & TECHNO-OPTIMISTS (Ranked by Public Prominence)
 export const TOP_50_ACCELERATIONISTS = [
-  { id: 'eacc-1', name: 'Elon Musk', role: 'Founder of SpaceX, Tesla & xAI', focus: 'Multi-planetary civilization, truth-seeking superintelligence & humanoid abundance' },
-  { id: 'eacc-2', name: 'Jensen Huang', role: 'Founder & CEO of NVIDIA', focus: 'Accelerated computing, AI factories & digital biology at near-zero marginal cost' },
+  { id: 'eacc-1', name: 'Jensen Huang', role: 'Founder & CEO of NVIDIA', focus: 'Accelerated computing, AI factories & digital biology at near-zero marginal cost' },
+  { id: 'eacc-2', name: 'Elon Musk', role: 'Founder of SpaceX, Tesla & xAI', focus: 'Multi-planetary civilization, truth-seeking superintelligence & humanoid abundance' },
   { id: 'eacc-3', name: 'Marc Andreessen', role: 'Co-Founder of a16z & Techno-Optimist Manifesto Author', focus: 'Technology as the primary engine of human flourishing & anti-stagnation' },
   { id: 'eacc-4', name: 'Peter Diamandis', role: 'XPRIZE Founder, Abundance Author & Moonshots Host', focus: 'Demonetization of scarcity, longevity escape velocity & Massive Transformative Purposes' },
   { id: 'eacc-5', name: 'Ray Kurzweil', role: 'Futurist & Author of The Singularity Is Nearer', focus: 'Law of Accelerating Returns, medical nanobots & the 2045 human-AI merger' },

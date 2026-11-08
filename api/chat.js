@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required "contents" payload.' });
   }
 
-  const modelsToTry = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.7-flash'];
+  const modelsToTry = ['gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'];
   let lastError = 'Upstream API call failed';
 
   for (const modelName of modelsToTry) {

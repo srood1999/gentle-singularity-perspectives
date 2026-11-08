@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Comparing Perspectives on Living in an Era of Accelerated Progress AKA "The Foothills of the Singularity"</title>
+  <title>Comparing Perspectives on Living in an Era of Accelerated Progress — Entering the Foothills of the Singularity</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     * { box-sizing: border-box; }
@@ -1261,16 +1261,17 @@ function synthesizeExpandedReasoning(categoryKey, person, question) {
       };
     }
 
-    function addComparisonEntry(questionText) {
+    function setActiveComparisonEntry(questionText) {
       const answers = {};
       CATEGORIES.forEach((cat) => {
         const person = getPerson(cat.id);
         answers[cat.id] = buildEntry(cat.id, person, questionText);
       });
-      state.comparisons.unshift({ question: questionText, answers });
+      state.expandedCards = {};
+      state.comparisons = [{ question: questionText, answers }];
     }
 
-    addComparisonEntry(SUGGESTED_QUESTIONS[0]);
+    setActiveComparisonEntry(SUGGESTED_QUESTIONS[0]);
 
     async function refreshLiveTenDayTechQuestions() {
       const updated = await fetchLiveTenDayTechQuestions();
@@ -1314,7 +1315,7 @@ function synthesizeExpandedReasoning(categoryKey, person, question) {
       const q = (questionText || '').trim();
       if (!q) return;
       stopSpeaking();
-      addComparisonEntry(q);
+      setActiveComparisonEntry(q);
       render();
     }
 
@@ -1342,17 +1343,19 @@ function synthesizeExpandedReasoning(categoryKey, person, question) {
 
     function render() {
       const app = document.getElementById('app');
+      const activeQ = state.comparisons[0]?.question || '';
       app.innerHTML = `
         <div class="min-h-screen bg-[#EAE5DB] p-2.5 sm:p-5 lg:p-7">
           <div class="max-w-[1440px] mx-auto rounded-3xl border-2 border-stone-300 ring-4 ring-stone-200/70 bg-[#FAF8F5] shadow-xl overflow-hidden flex flex-col">
             <div class="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-blue-500 via-rose-500 to-amber-500"></div>
 
-            <!-- Light Framed Header -->
+            <!-- Light Framed Header with Two-Line Title -->
             <header class="bg-white border-b border-stone-200 px-4 sm:px-8 py-5 shadow-sm">
               <div class="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div class="max-w-4xl">
                   <h1 class="text-lg sm:text-2xl font-bold tracking-tight text-slate-900 leading-snug">
-                    Comparing Perspectives on Living in an Era of Accelerated Progress AKA &ldquo;The Foothills of the Singularity&rdquo;
+                    <span class="block">Comparing Perspectives on Living in an Era of Accelerated Progress</span>
+                    <span class="block text-amber-900 mt-0.5">AKA &ldquo;Entering the Foothills of the Singularity&rdquo;</span>
                   </h1>
                   <p class="text-xs text-slate-500 mt-1.5 leading-relaxed">
                     Each voice is modeled as an AI digital twin drawing on the full breadth of that individual&apos;s published books, essays, interviews, debates, and personal worldview—with a speaker icon on every card to listen out loud.
@@ -1436,7 +1439,11 @@ function synthesizeExpandedReasoning(categoryKey, person, question) {
                       <button
                         type="button"
                         onclick="handleAskQuestion(state.sampleQuestions[${qIdx}])"
-                        class="text-left text-xs bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-950 border border-stone-200 hover:border-amber-300 px-3.5 py-2 rounded-xl shadow-sm transition-all"
+                        class="text-left text-xs border px-3.5 py-2 rounded-xl shadow-sm transition-all ${
+                          activeQ === q
+                            ? 'bg-amber-50 text-amber-950 border-amber-400 font-semibold'
+                            : 'bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-950 border-stone-200 hover:border-amber-300'
+                        }"
                       >
                         &ldquo;${escapeHtml(q)}&rdquo;
                       </button>
@@ -1448,10 +1455,11 @@ function synthesizeExpandedReasoning(categoryKey, person, question) {
               </div>
             </section>
 
-            <!-- Side-by-Side Comparison Feed -->
+            <!-- Single Active Question & 4 Side-by-Side Answers -->
             <main class="flex-1 px-4 sm:px-8 py-6">
-              <div class="max-w-7xl mx-auto space-y-8">
+              <div class="max-w-7xl mx-auto space-y-6">
                 ${state.comparisons
+                  .slice(0, 1)
                   .map((item, cIdx) => {
                     const allExpanded = CATEGORIES.every(
                       (cat) => state.expandedCards[`${cIdx}-${cat.id}`]
@@ -1593,7 +1601,7 @@ function synthesizeExpandedReasoning(categoryKey, person, question) {
 
             <!-- Framed Application Footer -->
             <footer class="bg-white border-t border-stone-200 px-6 py-3 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
-              <span>The Foothills of the Singularity Perspectives Panel • 250 Voices Ranked by Prominence Across 4 Pillars</span>
+              <span>Entering the Foothills of the Singularity Perspectives Panel • 250 Voices Ranked by Prominence Across 4 Pillars</span>
               <span>Click &ldquo;Listen&rdquo; on any card to hear the response spoken aloud, or &ldquo;Expand Your Reasoning More&rdquo; for deep-dive analysis</span>
             </footer>
           </div>

@@ -6,7 +6,6 @@ import {
   AlertCircle,
   MessageSquare,
   Shuffle,
-  RotateCcw,
   HelpCircle,
   ChevronDown,
   ChevronUp,
@@ -53,12 +52,11 @@ export default function App() {
     };
   }, []);
 
-  // Track which cards have their "Expand Your Reasoning More" section open: key = `${cIdx}-${catId}`
+  // Track which of the 4 cards have their "Expand Your Reasoning More" section open: key = catId
   const [expandedCards, setExpandedCards] = useState({});
 
-  // Track active Text-to-Speech playback: key = `${cIdx}-${catId}` or `row-${cIdx}` or null
+  // Track active Text-to-Speech playback: key = catId or 'all' or null
   const [speakingKey, setSpeakingKey] = useState(null);
-  const speechQueueRef = useRef([]);
   const isCancelledRef = useRef(false);
 
   // Stop speech on unmount
@@ -72,7 +70,6 @@ export default function App() {
 
   const stopSpeaking = () => {
     isCancelledRef.current = true;
-    speechQueueRef.current = [];
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
@@ -137,9 +134,8 @@ export default function App() {
     window.speechSynthesis.speak(utterance);
   };
 
-  const handleToggleSpeakCard = (cIdx, catId, entry, isExpanded, question) => {
-    const cardKey = `${cIdx}-${catId}`;
-    if (speakingKey === cardKey) {
+  const handleToggleSpeakCard = (catId, entry, isExpanded, question) => {
+    if (speakingKey === catId) {
       stopSpeaking();
       return;
     }
@@ -153,14 +149,13 @@ export default function App() {
       ? `${entry.person.name}. ${entry.text} Deep-dive reasoning: ${expandedParagraphs.join(' ')}`
       : `${entry.person.name}. ${entry.text}`;
 
-    speakSingleUtterance(textToRead, entry.person, catId, cardKey, () => {
+    speakSingleUtterance(textToRead, entry.person, catId, catId, () => {
       setSpeakingKey(null);
     });
   };
 
-  const handleToggleSpeakRow = (cIdx, item) => {
-    const rowKey = `row-${cIdx}`;
-    if (speakingKey && (speakingKey === rowKey || speakingKey.startsWith(`${cIdx}-`))) {
+  const handleToggleSpeakAll = (item) => {
+    if (speakingKey) {
       stopSpeaking();
       return;
     }
@@ -173,8 +168,7 @@ export default function App() {
       return {
         catId: cat.id,
         person: entry.person,
-        text: `${entry.person.name}: ${entry.text}`,
-        cardKey: `${cIdx}-${cat.id}`
+        text: `${entry.person.name}: ${entry.text}`
       };
     });
 
@@ -184,7 +178,7 @@ export default function App() {
         return;
       }
       const step = steps[idx];
-      speakSingleUtterance(step.text, step.person, step.catId, step.cardKey, () => {
+      speakSingleUtterance(step.text, step.person, step.catId, step.catId, () => {
         runStep(idx + 1);
       });
     };
@@ -199,36 +193,34 @@ export default function App() {
     sources: getThinkerSources(person)
   });
 
-  // Side-by-side comparison feed (newest at the top so answers appear right below the input & sample questions)
-  const [comparisons, setComparisons] = useState(() => {
+  // Single Active Comparison on Screen (no stacked old questions below)
+  const [activeComparison, setActiveComparison] = useState(() => {
     const initialQuestion = SUGGESTED_QUESTIONS[0];
-    return [
-      {
-        question: initialQuestion,
-        answers: {
-          accelerationist: buildAnswerEntry(
-            'accelerationist',
-            TOP_50_ACCELERATIONISTS[0],
-            initialQuestion
-          ),
-          pragmatist: buildAnswerEntry(
-            'pragmatist',
-            TOP_50_PRAGMATISTS[0],
-            initialQuestion
-          ),
-          pessimist: buildAnswerEntry(
-            'pessimist',
-            TOP_50_PESSIMISTS[0],
-            initialQuestion
-          ),
-          philosopher: buildAnswerEntry(
-            'philosopher',
-            TOP_100_PHILOSOPHERS[0],
-            initialQuestion
-          )
-        }
+    return {
+      question: initialQuestion,
+      answers: {
+        accelerationist: buildAnswerEntry(
+          'accelerationist',
+          TOP_50_ACCELERATIONISTS[0],
+          initialQuestion
+        ),
+        pragmatist: buildAnswerEntry(
+          'pragmatist',
+          TOP_50_PRAGMATISTS[0],
+          initialQuestion
+        ),
+        pessimist: buildAnswerEntry(
+          'pessimist',
+          TOP_50_PESSIMISTS[0],
+          initialQuestion
+        ),
+        philosopher: buildAnswerEntry(
+          'philosopher',
+          TOP_100_PHILOSOPHERS[0],
+          initialQuestion
+        )
       }
-    ];
+    };
   });
 
   const [inputText, setInputText] = useState('');
@@ -240,23 +232,20 @@ export default function App() {
     return cat.roster.find((p) => p.id === personId) || cat.roster[0];
   };
 
-  const toggleExpandCard = (cIdx, catId) => {
-    const key = `${cIdx}-${catId}`;
+  const toggleExpandCard = (catId) => {
     setExpandedCards((prev) => ({
       ...prev,
-      [key]: !prev[key]
+      [catId]: !prev[catId]
     }));
   };
 
-  const toggleExpandAllInRow = (cIdx) => {
-    const allOpen = CATEGORIES.every((cat) => expandedCards[`${cIdx}-${cat.id}`]);
-    setExpandedCards((prev) => {
-      const next = { ...prev };
-      CATEGORIES.forEach((cat) => {
-        next[`${cIdx}-${cat.id}`] = !allOpen;
-      });
-      return next;
+  const toggleExpandAll = () => {
+    const allOpen = CATEGORIES.every((cat) => expandedCards[cat.id]);
+    const next = {};
+    CATEGORIES.forEach((cat) => {
+      next[cat.id] = !allOpen;
     });
+    setExpandedCards(next);
   };
 
   const queryVoiceOrFallback = async (person, catId, question, fallbackFn) => {
@@ -268,8 +257,11 @@ export default function App() {
     };
 
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+    const preferredModel = import.meta.env.VITE_GEMINI_MODEL || 'gemini-3.7-flash';
     if (apiKey) {
-      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.7-flash'];
+      const models = Array.from(
+        new Set([preferredModel, 'gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'])
+      );
       for (const modelName of models) {
         try {
           const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
@@ -315,67 +307,86 @@ export default function App() {
     }));
 
     const person = getPersonById(catId, newPersonId);
-    const currentQuestion = comparisons[0]?.question || SUGGESTED_QUESTIONS[0];
+    const currentQuestion = activeComparison.question;
 
     // Immediately show the rich persona synthesis so the UI feels instant
-    setComparisons((prev) => {
-      if (prev.length === 0) return prev;
-      const updated = [...prev];
-      const top = { ...updated[0], answers: { ...updated[0].answers } };
-      top.answers[catId] = buildAnswerEntry(catId, person, top.question);
-      updated[0] = top;
-      return updated;
-    });
+    setActiveComparison((prev) => ({
+      ...prev,
+      answers: {
+        ...prev.answers,
+        [catId]: buildAnswerEntry(catId, person, prev.question)
+      }
+    }));
 
     // Also query live Gemini with Google Search grounding if configured
     const liveReply = await queryVoiceOrFallback(person, catId, currentQuestion, () => null);
     if (liveReply) {
-      setComparisons((prev) => {
-        if (prev.length === 0 || prev[0].question !== currentQuestion) return prev;
-        const updated = [...prev];
-        const top = { ...updated[0], answers: { ...updated[0].answers } };
-        if (top.answers[catId]?.person?.id === person.id) {
-          top.answers[catId] = {
-            ...top.answers[catId],
-            text: liveReply
-          };
-          updated[0] = top;
-        }
-        return updated;
+      setActiveComparison((prev) => {
+        if (prev.question !== currentQuestion) return prev;
+        if (prev.answers[catId]?.person?.id !== person.id) return prev;
+        return {
+          ...prev,
+          answers: {
+            ...prev.answers,
+            [catId]: {
+              ...prev.answers[catId],
+              text: liveReply
+            }
+          }
+        };
       });
     }
   };
 
-  const handleRandomizeFour = () => {
+  const handleRandomizeFour = async () => {
     stopSpeaking();
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-    const nextAcc = pick(TOP_50_ACCELERATIONISTS);
-    const nextPrag = pick(TOP_50_PRAGMATISTS);
-    const nextDoom = pick(TOP_50_PESSIMISTS);
-    const nextPhil = pick(TOP_100_PHILOSOPHERS);
+    const nextMap = {
+      accelerationist: pick(TOP_50_ACCELERATIONISTS),
+      pragmatist: pick(TOP_50_PRAGMATISTS),
+      pessimist: pick(TOP_50_PESSIMISTS),
+      philosopher: pick(TOP_100_PHILOSOPHERS)
+    };
 
     setSelectedFour({
-      accelerationist: nextAcc.id,
-      pragmatist: nextPrag.id,
-      pessimist: nextDoom.id,
-      philosopher: nextPhil.id
+      accelerationist: nextMap.accelerationist.id,
+      pragmatist: nextMap.pragmatist.id,
+      pessimist: nextMap.pessimist.id,
+      philosopher: nextMap.philosopher.id
     });
 
-    setComparisons((prev) => {
-      if (prev.length === 0) return prev;
-      const updated = [...prev];
-      const q = updated[0].question;
-      updated[0] = {
-        question: q,
-        answers: {
-          accelerationist: buildAnswerEntry('accelerationist', nextAcc, q),
-          pragmatist: buildAnswerEntry('pragmatist', nextPrag, q),
-          pessimist: buildAnswerEntry('pessimist', nextDoom, q),
-          philosopher: buildAnswerEntry('philosopher', nextPhil, q)
-        }
-      };
-      return updated;
+    const q = activeComparison.question;
+    setActiveComparison({
+      question: q,
+      answers: {
+        accelerationist: buildAnswerEntry('accelerationist', nextMap.accelerationist, q),
+        pragmatist: buildAnswerEntry('pragmatist', nextMap.pragmatist, q),
+        pessimist: buildAnswerEntry('pessimist', nextMap.pessimist, q),
+        philosopher: buildAnswerEntry('philosopher', nextMap.philosopher, q)
+      }
     });
+
+    // If live Gemini is available, upgrade each of the 4 randomized voices
+    for (const cat of CATEGORIES) {
+      const person = nextMap[cat.id];
+      const liveReply = await queryVoiceOrFallback(person, cat.id, q, () => null);
+      if (liveReply) {
+        setActiveComparison((prev) => {
+          if (prev.question !== q || prev.answers[cat.id]?.person?.id !== person.id) return prev;
+          return {
+            ...prev,
+            answers: {
+              ...prev.answers,
+              [cat.id]: {
+                ...prev.answers[cat.id],
+                text: liveReply
+              }
+            }
+          };
+        });
+        await new Promise((r) => setTimeout(r, 1200));
+      }
+    }
   };
 
   const submitQuestion = async (questionOverride) => {
@@ -386,10 +397,13 @@ export default function App() {
     setInputText('');
     setIsLoading(true);
     setError(null);
+    setExpandedCards({});
 
     try {
       const answers = {};
-      for (const cat of CATEGORIES) {
+      const hasApiKey = Boolean(import.meta.env.VITE_GEMINI_API_KEY);
+      for (let i = 0; i < CATEGORIES.length; i++) {
+        const cat = CATEGORIES[i];
         const person = getPersonById(cat.id, selectedFour[cat.id]);
         const reply = await queryVoiceOrFallback(person, cat.id, q, () =>
           synthesizeThinkerResponse(cat.id, person, q)
@@ -400,8 +414,12 @@ export default function App() {
           expandedParagraphs: synthesizeExpandedReasoning(cat.id, person, q),
           sources: getThinkerSources(person)
         };
+        if (hasApiKey && i < CATEGORIES.length - 1) {
+          await new Promise((r) => setTimeout(r, 1200));
+        }
       }
-      setComparisons((prev) => [{ question: q, answers }, ...prev]);
+      // Replace the active comparison so only the current question & answers are on screen
+      setActiveComparison({ question: q, answers });
     } catch (err) {
       console.error(err);
       setError('Failed to get a response. Please try again.');
@@ -415,38 +433,8 @@ export default function App() {
     submitQuestion();
   };
 
-  const handleClearFeed = () => {
-    stopSpeaking();
-    const q = SUGGESTED_QUESTIONS[0];
-    setExpandedCards({});
-    setComparisons([
-      {
-        question: q,
-        answers: {
-          accelerationist: buildAnswerEntry(
-            'accelerationist',
-            getPersonById('accelerationist', selectedFour.accelerationist),
-            q
-          ),
-          pragmatist: buildAnswerEntry(
-            'pragmatist',
-            getPersonById('pragmatist', selectedFour.pragmatist),
-            q
-          ),
-          pessimist: buildAnswerEntry(
-            'pessimist',
-            getPersonById('pessimist', selectedFour.pessimist),
-            q
-          ),
-          philosopher: buildAnswerEntry(
-            'philosopher',
-            getPersonById('philosopher', selectedFour.philosopher),
-            q
-          )
-        }
-      }
-    ]);
-  };
+  const allExpanded = CATEGORIES.every((cat) => expandedCards[cat.id]);
+  const isAnySpeaking = Boolean(speakingKey);
 
   return (
     /* Outer Ambient Canvas + Self-Contained Framed Application Border */
@@ -455,7 +443,7 @@ export default function App() {
         {/* Top 4-Pillar Accent Ribbon */}
         <div className="h-1.5 w-full bg-gradient-to-r from-emerald-500 via-blue-500 via-rose-500 to-amber-500" />
 
-        {/* Unified Light Header */}
+        {/* Unified Light Header with Two-Line Title */}
         <header className="bg-white border-b border-stone-200/90 px-4 sm:px-8 py-5 shadow-sm">
           <div className="max-w-7xl mx-auto flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div className="flex items-start gap-3.5 max-w-4xl">
@@ -464,7 +452,12 @@ export default function App() {
               </div>
               <div>
                 <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-slate-900 leading-snug">
-                  Comparing Perspectives on Living in an Era of Accelerated Progress AKA &ldquo;The Foothills of the Singularity&rdquo;
+                  <span className="block">
+                    Comparing Perspectives on Living in an Era of Accelerated Progress
+                  </span>
+                  <span className="block text-amber-900 mt-0.5">
+                    AKA &ldquo;Entering the Foothills of the Singularity&rdquo;
+                  </span>
                 </h1>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
                   Each voice is modeled as an AI digital twin drawing on the full breadth of that individual&apos;s published books, essays, interviews, debates, and personal worldview—with a speaker icon on every card to listen out loud.
@@ -481,16 +474,6 @@ export default function App() {
                 <Shuffle className="w-3.5 h-3.5" />
                 Randomize 4 Voices
               </button>
-              {comparisons.length > 1 && (
-                <button
-                  type="button"
-                  onClick={handleClearFeed}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium bg-white hover:bg-stone-100 text-slate-600 border border-stone-200 transition-colors"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  Reset
-                </button>
-              )}
             </div>
           </div>
         </header>
@@ -582,7 +565,11 @@ export default function App() {
                     type="button"
                     disabled={isLoading}
                     onClick={() => submitQuestion(q)}
-                    className="text-left text-xs bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-950 border border-stone-200/90 hover:border-amber-300 px-3.5 py-2 rounded-xl shadow-sm transition-all disabled:opacity-50"
+                    className={`text-left text-xs border px-3.5 py-2 rounded-xl shadow-sm transition-all disabled:opacity-50 ${
+                      activeComparison.question === q
+                        ? 'bg-amber-50 text-amber-950 border-amber-400 font-semibold'
+                        : 'bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-950 border-stone-200/90 hover:border-amber-300'
+                    }`}
                   >
                     &ldquo;{q}&rdquo;
                   </button>
@@ -592,9 +579,9 @@ export default function App() {
           </div>
         </section>
 
-        {/* Side-by-Side Comparison Feed */}
+        {/* Single Active Question & 4 Side-by-Side Answers */}
         <main className="flex-1 px-4 sm:px-8 py-6">
-          <div className="max-w-7xl mx-auto space-y-8">
+          <div className="max-w-7xl mx-auto space-y-6">
             {isLoading && (
               <div className="flex justify-center py-4">
                 <div className="bg-white border border-stone-300 rounded-full px-5 py-2.5 shadow-sm flex items-center gap-2 text-sm text-slate-700">
@@ -613,240 +600,227 @@ export default function App() {
               </div>
             )}
 
-            {comparisons.map((item, cIdx) => {
-              const allExpanded = CATEGORIES.every(
-                (cat) => expandedCards[`${cIdx}-${cat.id}`]
-              );
-              const isRowSpeaking =
-                speakingKey &&
-                (speakingKey === `row-${cIdx}` || speakingKey.startsWith(`${cIdx}-`));
-
-              return (
-                <div key={cIdx} className="space-y-4">
-                  {/* Clean Light Question Header */}
-                  <div className="bg-white border border-stone-200/90 px-5 py-3.5 rounded-2xl shadow-sm flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-bold uppercase px-2.5 py-1 rounded-lg bg-amber-100/90 text-amber-900 border border-amber-200">
-                        Active Question
-                      </span>
-                      <h2 className="font-bold text-base sm:text-lg text-slate-900">
-                        {item.question}
-                      </h2>
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleSpeakRow(cIdx, item)}
-                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
-                          isRowSpeaking
-                            ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
-                            : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300/80'
-                        }`}
-                        title="Listen to all 4 panelists speak their answers in sequence"
-                      >
-                        {isRowSpeaking ? (
-                          <>
-                            <VolumeX className="w-3.5 h-3.5 animate-pulse" />
-                            <span>Stop Panel Audio</span>
-                          </>
-                        ) : (
-                          <>
-                            <Volume2 className="w-3.5 h-3.5 text-amber-700" />
-                            <span>Listen to All 4</span>
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => toggleExpandAllInRow(cIdx)}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-stone-200/90 transition-colors"
-                      >
-                        <BookOpen className="w-3.5 h-3.5 text-amber-700" />
-                        <span>
-                          {allExpanded
-                            ? 'Collapse All 4 Deep Dives'
-                            : 'Expand All 4 Reasoning & Sources'}
-                        </span>
-                      </button>
-                      <span className="hidden sm:inline-flex text-xs text-slate-500 items-center gap-1">
-                        <MessageSquare className="w-3.5 h-3.5" />
-                        4 Voices Compared
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* 4 Side-by-Side Answer Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
-                    {CATEGORIES.map((cat) => {
-                      const entry = item.answers[cat.id];
-                      if (!entry) return null;
-                      const cardKey = `${cIdx}-${cat.id}`;
-                      const isExpanded = !!expandedCards[cardKey];
-                      const isSpeakingCard = speakingKey === cardKey;
-                      const expandedParagraphs =
-                        entry.expandedParagraphs ||
-                        synthesizeExpandedReasoning(cat.id, entry.person, item.question);
-                      const sources =
-                        entry.sources || getThinkerSources(entry.person);
-
-                      return (
-                        <article
-                          key={cat.id}
-                          className={`bg-white rounded-2xl border shadow-sm flex flex-col justify-between overflow-hidden transition-all ${
-                            isSpeakingCard ? 'ring-2 ring-amber-500 ' : ''
-                          }${cat.cardBorder}`}
-                        >
-                          <div>
-                            {/* Card Top Header with Speaker Icon Button */}
-                            <div className={`px-4 py-3.5 ${cat.cardHeader}`}>
-                              <div className="flex items-center justify-between gap-2 mb-1.5">
-                                <span
-                                  className={`inline-block text-xs font-bold uppercase px-2 py-0.5 rounded-md border ${cat.pillClass}`}
-                                >
-                                  {cat.badge}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    handleToggleSpeakCard(
-                                      cIdx,
-                                      cat.id,
-                                      entry,
-                                      isExpanded,
-                                      item.question
-                                    )
-                                  }
-                                  aria-label={
-                                    isSpeakingCard
-                                      ? `Stop speaking ${entry.person.name}'s response`
-                                      : `Listen to ${entry.person.name}'s response out loud`
-                                  }
-                                  title={
-                                    isSpeakingCard
-                                      ? 'Stop speaking'
-                                      : `Listen to ${entry.person.name} out loud`
-                                  }
-                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all shadow-sm ${
-                                    isSpeakingCard
-                                      ? 'bg-amber-600 text-white border-amber-700 animate-pulse'
-                                      : 'bg-white/90 hover:bg-white text-slate-800 border-stone-300/90 hover:border-amber-400'
-                                  }`}
-                                >
-                                  {isSpeakingCard ? (
-                                    <>
-                                      <VolumeX className="w-3.5 h-3.5" />
-                                      <span>Stop</span>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Volume2 className="w-3.5 h-3.5 text-amber-700" />
-                                      <span>Listen</span>
-                                    </>
-                                  )}
-                                </button>
-                              </div>
-                              <h3 className="font-bold text-base text-slate-900 leading-snug">
-                                {entry.person.name}
-                              </h3>
-                              <p className="text-xs text-slate-600 mt-0.5 line-clamp-1" title={entry.person.role}>
-                                {entry.person.role}
-                              </p>
-                            </div>
-
-                            {/* Lifelike First-Person Response + Expand Your Reasoning More Button */}
-                            <div className="p-4 sm:p-5 space-y-3.5">
-                              <p className="text-sm leading-relaxed text-slate-800">
-                                {entry.text}
-                              </p>
-
-                              {/* Expand Your Reasoning More Toggle Button */}
-                              <button
-                                type="button"
-                                onClick={() => toggleExpandCard(cIdx, cat.id)}
-                                className="w-full inline-flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#FAF8F5] hover:bg-amber-50/90 text-slate-800 hover:text-amber-950 border border-stone-200/90 hover:border-amber-300 transition-all shadow-sm"
-                              >
-                                <span className="inline-flex items-center gap-1.5">
-                                  <BookOpen className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
-                                  <span>
-                                    {isExpanded
-                                      ? 'Hide Expanded Reasoning & Sources'
-                                      : 'Expand Your Reasoning More'}
-                                  </span>
-                                </span>
-                                {isExpanded ? (
-                                  <ChevronUp className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                                ) : (
-                                  <ChevronDown className="w-4 h-4 text-slate-500 flex-shrink-0" />
-                                )}
-                              </button>
-
-                              {/* Expanded Multi-Paragraph Reasoning + Legitimate Sources / Bibliography */}
-                              {isExpanded && (
-                                <div className="pt-3 border-t border-stone-200/90 space-y-3.5 animate-fadeIn">
-                                  <div className="space-y-2.5 bg-[#FAF8F5] p-3.5 rounded-xl border border-stone-200/80">
-                                    <div className="text-xs font-bold uppercase tracking-wider text-amber-900">
-                                      Deep-Dive Reasoning ({entry.person.name})
-                                    </div>
-                                    {expandedParagraphs.map((para, pIdx) => (
-                                      <p
-                                        key={pIdx}
-                                        className="text-xs sm:text-sm leading-relaxed text-slate-700"
-                                      >
-                                        {para}
-                                      </p>
-                                    ))}
-                                  </div>
-
-                                  {/* Legitimate Sources & Bibliography */}
-                                  <div className="bg-stone-50/90 p-3.5 rounded-xl border border-stone-200/90 space-y-2">
-                                    <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700">
-                                      <BookOpen className="w-3.5 h-3.5 text-amber-700" />
-                                      <span>Primary Sources &amp; Bibliography</span>
-                                    </div>
-                                    <ul className="space-y-2">
-                                      {sources.map((src, sIdx) => (
-                                        <li
-                                          key={sIdx}
-                                          className="text-xs bg-white p-2.5 rounded-lg border border-stone-200/80 shadow-sm"
-                                        >
-                                          <div className="font-semibold text-slate-900 leading-snug">
-                                            {src.title}
-                                          </div>
-                                          <div className="text-amber-800 font-medium mt-0.5">
-                                            {src.type} • {src.year}
-                                          </div>
-                                          <p className="text-slate-600 mt-1 leading-relaxed">
-                                            {src.detail}
-                                          </p>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Card Footer: Biographical Background & Domains */}
-                          <div className="px-4 py-3 bg-stone-50/80 border-t border-stone-200/80 text-xs text-slate-600">
-                            <span className="font-semibold text-slate-800">Known For:</span>{' '}
-                            {entry.person.focus}
-                          </div>
-                        </article>
-                      );
-                    })}
-                  </div>
+            <div className="space-y-4">
+              {/* Clean Light Question Header */}
+              <div className="bg-white border border-stone-200/90 px-5 py-3.5 rounded-2xl shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-xs font-bold uppercase px-2.5 py-1 rounded-lg bg-amber-100/90 text-amber-900 border border-amber-200">
+                    Active Question
+                  </span>
+                  <h2 className="font-bold text-base sm:text-lg text-slate-900">
+                    {activeComparison.question}
+                  </h2>
                 </div>
-              );
-            })}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => handleToggleSpeakAll(activeComparison)}
+                    className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
+                      isAnySpeaking
+                        ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
+                        : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300/80'
+                    }`}
+                    title="Listen to all 4 panelists speak their answers in sequence"
+                  >
+                    {isAnySpeaking ? (
+                      <>
+                        <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                        <span>Stop Panel Audio</span>
+                      </>
+                    ) : (
+                      <>
+                        <Volume2 className="w-3.5 h-3.5 text-amber-700" />
+                        <span>Listen to All 4</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={toggleExpandAll}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-stone-100 hover:bg-amber-50 text-slate-700 hover:text-amber-900 border border-stone-200/90 transition-colors"
+                  >
+                    <BookOpen className="w-3.5 h-3.5 text-amber-700" />
+                    <span>
+                      {allExpanded
+                        ? 'Collapse All 4 Deep Dives'
+                        : 'Expand All 4 Reasoning & Sources'}
+                    </span>
+                  </button>
+                  <span className="hidden sm:inline-flex text-xs text-slate-500 items-center gap-1">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                    4 Voices Compared
+                  </span>
+                </div>
+              </div>
+
+              {/* 4 Side-by-Side Answer Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">
+                {CATEGORIES.map((cat) => {
+                  const entry = activeComparison.answers[cat.id];
+                  if (!entry) return null;
+                  const isExpanded = !!expandedCards[cat.id];
+                  const isSpeakingCard = speakingKey === cat.id;
+                  const expandedParagraphs =
+                    entry.expandedParagraphs ||
+                    synthesizeExpandedReasoning(cat.id, entry.person, activeComparison.question);
+                  const sources =
+                    entry.sources || getThinkerSources(entry.person);
+
+                  return (
+                    <article
+                      key={cat.id}
+                      className={`bg-white rounded-2xl border shadow-sm flex flex-col justify-between overflow-hidden transition-all ${
+                        isSpeakingCard ? 'ring-2 ring-amber-500 ' : ''
+                      }${cat.cardBorder}`}
+                    >
+                      <div>
+                        {/* Card Top Header with Speaker Icon Button */}
+                        <div className={`px-4 py-3.5 ${cat.cardHeader}`}>
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
+                            <span
+                              className={`inline-block text-xs font-bold uppercase px-2 py-0.5 rounded-md border ${cat.pillClass}`}
+                            >
+                              {cat.badge}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleToggleSpeakCard(
+                                  cat.id,
+                                  entry,
+                                  isExpanded,
+                                  activeComparison.question
+                                )
+                              }
+                              aria-label={
+                                isSpeakingCard
+                                  ? `Stop speaking ${entry.person.name}'s response`
+                                  : `Listen to ${entry.person.name}'s response out loud`
+                              }
+                              title={
+                                isSpeakingCard
+                                  ? 'Stop speaking'
+                                  : `Listen to ${entry.person.name} out loud`
+                              }
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all shadow-sm ${
+                                isSpeakingCard
+                                  ? 'bg-amber-600 text-white border-amber-700 animate-pulse'
+                                  : 'bg-white/90 hover:bg-white text-slate-800 border-stone-300/90 hover:border-amber-400'
+                              }`}
+                            >
+                              {isSpeakingCard ? (
+                                <>
+                                  <VolumeX className="w-3.5 h-3.5" />
+                                  <span>Stop</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Volume2 className="w-3.5 h-3.5 text-amber-700" />
+                                  <span>Listen</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <h3 className="font-bold text-base text-slate-900 leading-snug">
+                            {entry.person.name}
+                          </h3>
+                          <p className="text-xs text-slate-600 mt-0.5 line-clamp-1" title={entry.person.role}>
+                            {entry.person.role}
+                          </p>
+                        </div>
+
+                        {/* Lifelike First-Person Response + Expand Your Reasoning More Button */}
+                        <div className="p-4 sm:p-5 space-y-3.5">
+                          <p className="text-sm leading-relaxed text-slate-800">
+                            {entry.text}
+                          </p>
+
+                          {/* Expand Your Reasoning More Toggle Button */}
+                          <button
+                            type="button"
+                            onClick={() => toggleExpandCard(cat.id)}
+                            className="w-full inline-flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#FAF8F5] hover:bg-amber-50/90 text-slate-800 hover:text-amber-950 border border-stone-200/90 hover:border-amber-300 transition-all shadow-sm"
+                          >
+                            <span className="inline-flex items-center gap-1.5">
+                              <BookOpen className="w-3.5 h-3.5 text-amber-700 flex-shrink-0" />
+                              <span>
+                                {isExpanded
+                                  ? 'Hide Expanded Reasoning & Sources'
+                                  : 'Expand Your Reasoning More'}
+                              </span>
+                            </span>
+                            {isExpanded ? (
+                              <ChevronUp className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                            ) : (
+                              <ChevronDown className="w-4 h-4 text-slate-500 flex-shrink-0" />
+                            )}
+                          </button>
+
+                          {/* Expanded Multi-Paragraph Reasoning + Legitimate Sources / Bibliography */}
+                          {isExpanded && (
+                            <div className="pt-3 border-t border-stone-200/90 space-y-3.5 animate-fadeIn">
+                              <div className="space-y-2.5 bg-[#FAF8F5] p-3.5 rounded-xl border border-stone-200/80">
+                                <div className="text-xs font-bold uppercase tracking-wider text-amber-900">
+                                  Deep-Dive Reasoning ({entry.person.name})
+                                </div>
+                                {expandedParagraphs.map((para, pIdx) => (
+                                  <p
+                                    key={pIdx}
+                                    className="text-xs sm:text-sm leading-relaxed text-slate-700"
+                                  >
+                                    {para}
+                                  </p>
+                                ))}
+                              </div>
+
+                              {/* Legitimate Sources & Bibliography */}
+                              <div className="bg-stone-50/90 p-3.5 rounded-xl border border-stone-200/90 space-y-2">
+                                <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-700">
+                                  <BookOpen className="w-3.5 h-3.5 text-amber-700" />
+                                  <span>Primary Sources &amp; Bibliography</span>
+                                </div>
+                                <ul className="space-y-2">
+                                  {sources.map((src, sIdx) => (
+                                    <li
+                                      key={sIdx}
+                                      className="text-xs bg-white p-2.5 rounded-lg border border-stone-200/80 shadow-sm"
+                                    >
+                                      <div className="font-semibold text-slate-900 leading-snug">
+                                        {src.title}
+                                      </div>
+                                      <div className="text-amber-800 font-medium mt-0.5">
+                                        {src.type} • {src.year}
+                                      </div>
+                                      <p className="text-slate-600 mt-1 leading-relaxed">
+                                        {src.detail}
+                                      </p>
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Card Footer: Biographical Background & Domains */}
+                      <div className="px-4 py-3 bg-stone-50/80 border-t border-stone-200/80 text-xs text-slate-600">
+                        <span className="font-semibold text-slate-800">Known For:</span>{' '}
+                        {entry.person.focus}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </main>
 
         {/* Subtle Framed Application Footer */}
         <footer className="bg-white border-t border-stone-200/90 px-6 py-3.5 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
           <span>
-            The Foothills of the Singularity Perspectives Panel • 250 Voices Across 4 Intellectual Pillars
+            Entering the Foothills of the Singularity Perspectives Panel • 250 Voices Across 4 Intellectual Pillars
           </span>
           <span>
             Click &ldquo;Listen&rdquo; on any card to hear the response spoken aloud, or &ldquo;Expand Your Reasoning More&rdquo; for deep-dive analysis

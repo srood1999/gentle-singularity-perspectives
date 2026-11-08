@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Send,
   Loader2,
@@ -10,7 +10,9 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
-  BookOpen
+  BookOpen,
+  Volume2,
+  VolumeX
 } from 'lucide-react';
 import {
   TOP_50_ACCELERATIONISTS,
@@ -22,7 +24,9 @@ import {
   fetchLiveTenDayTechQuestions,
   synthesizeThinkerResponse,
   synthesizeExpandedReasoning,
-  getThinkerSources
+  getThinkerSources,
+  getThinkerSpeechSettings,
+  buildThinkerSystemPrompt
 } from './data/roster200';
 
 export default function App() {
@@ -51,6 +55,142 @@ export default function App() {
 
   // Track which cards have their "Expand Your Reasoning More" section open: key = `${cIdx}-${catId}`
   const [expandedCards, setExpandedCards] = useState({});
+
+  // Track active Text-to-Speech playback: key = `${cIdx}-${catId}` or `row-${cIdx}` or null
+  const [speakingKey, setSpeakingKey] = useState(null);
+  const speechQueueRef = useRef([]);
+  const isCancelledRef = useRef(false);
+
+  // Stop speech on unmount
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const stopSpeaking = () => {
+    isCancelledRef.current = true;
+    speechQueueRef.current = [];
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    setSpeakingKey(null);
+  };
+
+  const pickBestVoice = (settings) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
+    const voices = window.speechSynthesis.getVoices() || [];
+    if (!voices.length) return null;
+
+    const langPrefix = (settings.lang || 'en-US').toLowerCase();
+    const enVoices = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith('en'));
+    const pool = enVoices.length ? enVoices : voices;
+
+    const femaleHints = /female|samantha|victoria|karen|moira|tessa|fiona|veena|zira|aria|jenny|sonia|libby|natasha|google uk english female|google us english/i;
+    const maleHints = /male|daniel|alex|fred|oliver|arthur|thomas|david|mark|guy|ryan|christopher|eric|roger|google uk english male/i;
+
+    const langMatches = pool.filter((v) => v.lang.toLowerCase().startsWith(langPrefix));
+    const searchPool = langMatches.length ? langMatches : pool;
+
+    if (settings.gender === 'female') {
+      const fMatch = searchPool.find((v) => femaleHints.test(v.name));
+      if (fMatch) return fMatch;
+    } else {
+      const mMatch = searchPool.find((v) => maleHints.test(v.name));
+      if (mMatch) return mMatch;
+    }
+    return searchPool[0] || pool[0];
+  };
+
+  const speakSingleUtterance = (text, person, catId, activeKey, onDone) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      alert('Text-to-speech is not supported in this browser.');
+      return;
+    }
+
+    const settings = getThinkerSpeechSettings(person, catId);
+    const utterance = new SpeechSynthesisUtterance(text);
+    const chosenVoice = pickBestVoice(settings);
+    if (chosenVoice) {
+      utterance.voice = chosenVoice;
+      utterance.lang = chosenVoice.lang;
+    } else {
+      utterance.lang = settings.lang || 'en-US';
+    }
+    utterance.pitch = settings.pitch || 1.0;
+    utterance.rate = settings.rate || 1.0;
+
+    utterance.onend = () => {
+      if (!isCancelledRef.current && onDone) {
+        onDone();
+      }
+    };
+    utterance.onerror = () => {
+      if (!isCancelledRef.current && onDone) {
+        onDone();
+      }
+    };
+
+    setSpeakingKey(activeKey);
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const handleToggleSpeakCard = (cIdx, catId, entry, isExpanded, question) => {
+    const cardKey = `${cIdx}-${catId}`;
+    if (speakingKey === cardKey) {
+      stopSpeaking();
+      return;
+    }
+
+    stopSpeaking();
+    isCancelledRef.current = false;
+
+    const expandedParagraphs =
+      entry.expandedParagraphs || synthesizeExpandedReasoning(catId, entry.person, question);
+    const textToRead = isExpanded
+      ? `${entry.person.name}. ${entry.text} Deep-dive reasoning: ${expandedParagraphs.join(' ')}`
+      : `${entry.person.name}. ${entry.text}`;
+
+    speakSingleUtterance(textToRead, entry.person, catId, cardKey, () => {
+      setSpeakingKey(null);
+    });
+  };
+
+  const handleToggleSpeakRow = (cIdx, item) => {
+    const rowKey = `row-${cIdx}`;
+    if (speakingKey && (speakingKey === rowKey || speakingKey.startsWith(`${cIdx}-`))) {
+      stopSpeaking();
+      return;
+    }
+
+    stopSpeaking();
+    isCancelledRef.current = false;
+
+    const steps = CATEGORIES.map((cat) => {
+      const entry = item.answers[cat.id];
+      return {
+        catId: cat.id,
+        person: entry.person,
+        text: `${entry.person.name}: ${entry.text}`,
+        cardKey: `${cIdx}-${cat.id}`
+      };
+    });
+
+    const runStep = (idx) => {
+      if (isCancelledRef.current || idx >= steps.length) {
+        setSpeakingKey(null);
+        return;
+      }
+      const step = steps[idx];
+      speakSingleUtterance(step.text, step.person, step.catId, step.cardKey, () => {
+        runStep(idx + 1);
+      });
+    };
+
+    runStep(0);
+  };
 
   const buildAnswerEntry = (catId, person, question) => ({
     person,
@@ -119,14 +259,65 @@ export default function App() {
     });
   };
 
-  const handleSelectDropdown = (catId, newPersonId) => {
+  const queryVoiceOrFallback = async (person, catId, question, fallbackFn) => {
+    const systemPrompt = buildThinkerSystemPrompt(person, catId);
+    const payload = {
+      contents: [{ role: 'user', parts: [{ text: question }] }],
+      systemInstruction: { parts: [{ text: systemPrompt }] },
+      tools: [{ googleSearch: {} }]
+    };
+
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
+    if (apiKey) {
+      const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.7-flash'];
+      for (const modelName of models) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+          const res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (txt) return txt;
+          }
+        } catch {
+          // Try next model or serverless route
+        }
+      }
+    }
+
+    // Try Vercel serverless endpoint /api/chat if available
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.text) return data.text;
+      }
+    } catch {
+      // Fallback to deep persona synthesis engine
+    }
+
+    return fallbackFn();
+  };
+
+  const handleSelectDropdown = async (catId, newPersonId) => {
+    stopSpeaking();
     setSelectedFour((prev) => ({
       ...prev,
       [catId]: newPersonId
     }));
 
     const person = getPersonById(catId, newPersonId);
-    // Update the current top comparison card immediately so the user sees the new voice right away
+    const currentQuestion = comparisons[0]?.question || SUGGESTED_QUESTIONS[0];
+
+    // Immediately show the rich persona synthesis so the UI feels instant
     setComparisons((prev) => {
       if (prev.length === 0) return prev;
       const updated = [...prev];
@@ -135,9 +326,28 @@ export default function App() {
       updated[0] = top;
       return updated;
     });
+
+    // Also query live Gemini with Google Search grounding if configured
+    const liveReply = await queryVoiceOrFallback(person, catId, currentQuestion, () => null);
+    if (liveReply) {
+      setComparisons((prev) => {
+        if (prev.length === 0 || prev[0].question !== currentQuestion) return prev;
+        const updated = [...prev];
+        const top = { ...updated[0], answers: { ...updated[0].answers } };
+        if (top.answers[catId]?.person?.id === person.id) {
+          top.answers[catId] = {
+            ...top.answers[catId],
+            text: liveReply
+          };
+          updated[0] = top;
+        }
+        return updated;
+      });
+    }
   };
 
   const handleRandomizeFour = () => {
+    stopSpeaking();
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
     const nextAcc = pick(TOP_50_ACCELERATIONISTS);
     const nextPrag = pick(TOP_50_PRAGMATISTS);
@@ -168,36 +378,11 @@ export default function App() {
     });
   };
 
-  const queryVoiceOrFallback = async (personPrompt, question, fallbackFn) => {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-    if (apiKey) {
-      try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        const res = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: question }] }],
-            systemInstruction: { parts: [{ text: personPrompt }] },
-            tools: [{ googleSearch: {} }]
-          })
-        });
-        if (res.ok) {
-          const data = await res.json();
-          const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-          if (txt) return txt;
-        }
-      } catch {
-        // Fallback to local persona synthesis
-      }
-    }
-    return fallbackFn();
-  };
-
   const submitQuestion = async (questionOverride) => {
     const q = (questionOverride ?? inputText).trim();
     if (!q || isLoading) return;
 
+    stopSpeaking();
     setInputText('');
     setIsLoading(true);
     setError(null);
@@ -206,8 +391,7 @@ export default function App() {
       const answers = {};
       for (const cat of CATEGORIES) {
         const person = getPersonById(cat.id, selectedFour[cat.id]);
-        const prompt = `You are a high-fidelity digital twin of ${person.name} (${person.role}). Your core philosophical/technical lens is: ${person.focus}. Answer the user's question in the first person, staying deeply faithful to ${person.name}'s actual published writings, terminology, worldview, and voice in 3 to 4 clear, insightful sentences.`;
-        const reply = await queryVoiceOrFallback(prompt, q, () =>
+        const reply = await queryVoiceOrFallback(person, cat.id, q, () =>
           synthesizeThinkerResponse(cat.id, person, q)
         );
         answers[cat.id] = {
@@ -232,6 +416,7 @@ export default function App() {
   };
 
   const handleClearFeed = () => {
+    stopSpeaking();
     const q = SUGGESTED_QUESTIONS[0];
     setExpandedCards({});
     setComparisons([
@@ -279,10 +464,10 @@ export default function App() {
               </div>
               <div>
                 <h1 className="text-lg sm:text-2xl font-bold tracking-tight text-slate-900 leading-snug">
-                  Comparing Perspectives on Living in An Era of Accelerated Progress AKA &ldquo;Gentle Singularity&rdquo;
+                  Comparing Perspectives on Living in an Era of Accelerated Progress AKA &ldquo;The Foothills of the Singularity&rdquo;
                 </h1>
                 <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
-                  Each voice is modeled as an AI digital twin grounded in that individual&apos;s published books, essays, interviews, and core philosophical axioms—capturing how they actually reason, argue, and evaluate the future.
+                  Each voice is modeled as an AI digital twin drawing on the full breadth of that individual&apos;s published books, essays, interviews, debates, and personal worldview—with a speaker icon on every card to listen out loud.
                 </p>
               </div>
             </div>
@@ -384,14 +569,14 @@ export default function App() {
               </button>
             </form>
 
-            {/* Clearly Labeled Sample Questions Section (Last 10 Days Tech Topics) */}
+            {/* Clearly Labeled Sample Questions Section (Last 10 Days Tech Topics + Philosophical) */}
             <div className="bg-[#FAF8F5] rounded-xl p-3 border border-stone-200/80">
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-amber-800 mb-2">
                 <HelpCircle className="w-3.5 h-3.5" />
-                <span>Sample Questions — Predominant Tech Topics (Last 10 Days):</span>
+                <span>Sample Questions — Predominant Tech Topics (Last 10 Days) &amp; Deep Philosophy:</span>
               </div>
               <div className="flex flex-wrap gap-2">
-                {SUGGESTED_QUESTIONS.map((q, i) => (
+                {sampleQuestions.map((q, i) => (
                   <button
                     key={i}
                     type="button"
@@ -414,7 +599,7 @@ export default function App() {
               <div className="flex justify-center py-4">
                 <div className="bg-white border border-stone-300 rounded-full px-5 py-2.5 shadow-sm flex items-center gap-2 text-sm text-slate-700">
                   <Loader2 className="w-4 h-4 animate-spin text-amber-700" />
-                  Generating side-by-side digital twin responses...
+                  Generating authentic side-by-side responses...
                 </div>
               </div>
             )}
@@ -432,6 +617,10 @@ export default function App() {
               const allExpanded = CATEGORIES.every(
                 (cat) => expandedCards[`${cIdx}-${cat.id}`]
               );
+              const isRowSpeaking =
+                speakingKey &&
+                (speakingKey === `row-${cIdx}` || speakingKey.startsWith(`${cIdx}-`));
+
               return (
                 <div key={cIdx} className="space-y-4">
                   {/* Clean Light Question Header */}
@@ -444,7 +633,30 @@ export default function App() {
                         {item.question}
                       </h2>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleSpeakRow(cIdx, item)}
+                        className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${
+                          isRowSpeaking
+                            ? 'bg-amber-600 text-white border-amber-700 shadow-sm'
+                            : 'bg-amber-50 hover:bg-amber-100 text-amber-900 border-amber-300/80'
+                        }`}
+                        title="Listen to all 4 panelists speak their answers in sequence"
+                      >
+                        {isRowSpeaking ? (
+                          <>
+                            <VolumeX className="w-3.5 h-3.5 animate-pulse" />
+                            <span>Stop Panel Audio</span>
+                          </>
+                        ) : (
+                          <>
+                            <Volume2 className="w-3.5 h-3.5 text-amber-700" />
+                            <span>Listen to All 4</span>
+                          </>
+                        )}
+                      </button>
+
                       <button
                         type="button"
                         onClick={() => toggleExpandAllInRow(cIdx)}
@@ -459,7 +671,7 @@ export default function App() {
                       </button>
                       <span className="hidden sm:inline-flex text-xs text-slate-500 items-center gap-1">
                         <MessageSquare className="w-3.5 h-3.5" />
-                        4 Digital Twins Compared
+                        4 Voices Compared
                       </span>
                     </div>
                   </div>
@@ -469,7 +681,9 @@ export default function App() {
                     {CATEGORIES.map((cat) => {
                       const entry = item.answers[cat.id];
                       if (!entry) return null;
-                      const isExpanded = !!expandedCards[`${cIdx}-${cat.id}`];
+                      const cardKey = `${cIdx}-${cat.id}`;
+                      const isExpanded = !!expandedCards[cardKey];
+                      const isSpeakingCard = speakingKey === cardKey;
                       const expandedParagraphs =
                         entry.expandedParagraphs ||
                         synthesizeExpandedReasoning(cat.id, entry.person, item.question);
@@ -479,25 +693,68 @@ export default function App() {
                       return (
                         <article
                           key={cat.id}
-                          className={`bg-white rounded-2xl border shadow-sm flex flex-col justify-between overflow-hidden transition-all ${cat.cardBorder}`}
+                          className={`bg-white rounded-2xl border shadow-sm flex flex-col justify-between overflow-hidden transition-all ${
+                            isSpeakingCard ? 'ring-2 ring-amber-500 ' : ''
+                          }${cat.cardBorder}`}
                         >
                           <div>
-                            {/* Card Top Header */}
+                            {/* Card Top Header with Speaker Icon Button */}
                             <div className={`px-4 py-3.5 ${cat.cardHeader}`}>
-                              <span
-                                className={`inline-block text-xs font-bold uppercase px-2 py-0.5 rounded-md border mb-1.5 ${cat.pillClass}`}
-                              >
-                                {cat.badge}
-                              </span>
+                              <div className="flex items-center justify-between gap-2 mb-1.5">
+                                <span
+                                  className={`inline-block text-xs font-bold uppercase px-2 py-0.5 rounded-md border ${cat.pillClass}`}
+                                >
+                                  {cat.badge}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    handleToggleSpeakCard(
+                                      cIdx,
+                                      cat.id,
+                                      entry,
+                                      isExpanded,
+                                      item.question
+                                    )
+                                  }
+                                  aria-label={
+                                    isSpeakingCard
+                                      ? `Stop speaking ${entry.person.name}'s response`
+                                      : `Listen to ${entry.person.name}'s response out loud`
+                                  }
+                                  title={
+                                    isSpeakingCard
+                                      ? 'Stop speaking'
+                                      : `Listen to ${entry.person.name} out loud`
+                                  }
+                                  className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border transition-all shadow-sm ${
+                                    isSpeakingCard
+                                      ? 'bg-amber-600 text-white border-amber-700 animate-pulse'
+                                      : 'bg-white/90 hover:bg-white text-slate-800 border-stone-300/90 hover:border-amber-400'
+                                  }`}
+                                >
+                                  {isSpeakingCard ? (
+                                    <>
+                                      <VolumeX className="w-3.5 h-3.5" />
+                                      <span>Stop</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Volume2 className="w-3.5 h-3.5 text-amber-700" />
+                                      <span>Listen</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
                               <h3 className="font-bold text-base text-slate-900 leading-snug">
                                 {entry.person.name}
                               </h3>
-                              <p className="text-xs text-slate-600 mt-0.5 line-clamp-1">
+                              <p className="text-xs text-slate-600 mt-0.5 line-clamp-1" title={entry.person.role}>
                                 {entry.person.role}
                               </p>
                             </div>
 
-                            {/* Short Response + Expand Your Reasoning More Button */}
+                            {/* Lifelike First-Person Response + Expand Your Reasoning More Button */}
                             <div className="p-4 sm:p-5 space-y-3.5">
                               <p className="text-sm leading-relaxed text-slate-800">
                                 {entry.text}
@@ -571,9 +828,9 @@ export default function App() {
                             </div>
                           </div>
 
-                          {/* Card Footer: Signature Focus */}
+                          {/* Card Footer: Biographical Background & Domains */}
                           <div className="px-4 py-3 bg-stone-50/80 border-t border-stone-200/80 text-xs text-slate-600">
-                            <span className="font-semibold text-slate-800">Core Lens:</span>{' '}
+                            <span className="font-semibold text-slate-800">Known For:</span>{' '}
                             {entry.person.focus}
                           </div>
                         </article>
@@ -589,10 +846,10 @@ export default function App() {
         {/* Subtle Framed Application Footer */}
         <footer className="bg-white border-t border-stone-200/90 px-6 py-3.5 text-xs text-slate-500 flex flex-wrap items-center justify-between gap-2">
           <span>
-            Gentle Singularity Perspectives Panel • 250 Voices Across 4 Intellectual Pillars
+            The Foothills of the Singularity Perspectives Panel • 250 Voices Across 4 Intellectual Pillars
           </span>
           <span>
-            Click &ldquo;Expand Your Reasoning More&rdquo; on any card for multi-paragraph analysis &amp; verified bibliography
+            Click &ldquo;Listen&rdquo; on any card to hear the response spoken aloud, or &ldquo;Expand Your Reasoning More&rdquo; for deep-dive analysis
           </span>
         </footer>
       </div>

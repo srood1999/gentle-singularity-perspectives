@@ -492,49 +492,552 @@ export function getThinkerSources(person) {
   return sources;
 }
 
+
 /**
- * Generates an authentic, concise 3–4 sentence opening response for any of the 250 thinkers.
+ * Deep Biographical & Rhetorical Persona Database
+ * Each thinker speaks in their authentic first-person cadence, drawing on their full body of work,
+ * books, companies, lectures, historical era, and signature concepts—never a canned category template.
+ */
+export const THINKER_PERSONA_PROFILES = {
+  'Jensen Huang': {
+    voice: { lang: 'en-US', pitch: 1.0, rate: 1.03, gender: 'male' },
+    energy: q => `Look, when people see gigawatt AI factories going up, they’re looking at the birth of a new industry—the manufacturing of intelligence itself. Every datacenter we build with Blackwell and Rubin architectures is actually driving the energy cost per token down by orders of magnitude compared to general-purpose CPU computing. We shouldn't cap the engine of the new industrial revolution; we should co-locate AI factories with next-generation nuclear, geothermal, and grid-stabilizing storage so intelligence becomes as abundant as electricity.`,
+    agents: q => `In the very near future, every company’s IT department is going to become the HR department for digital AI agents. At NVIDIA, our engineers already work alongside autonomous coding and chip-design agents, and the key isn't some dramatic "kill switch" panic—it’s building enterprise guardrails, NeMo safety rails, and clear permission boundaries right into the orchestration layer. You give agents autonomy inside verifiable sandboxes while humans direct the mission.`,
+    meaning: q => `When I washed dishes at Denny’s as a teenager, hard work taught me character, and I still believe no job is beneath anyone—but freeing humanity from repetitive drudgery doesn't erase human purpose, it elevates it. When marginal intelligence costs almost nothing, every biologist, artist, and small business owner suddenly has a supercomputer team amplifying their life's work. The meaning comes from the audacity of the problems we choose to solve next.`,
+    consciousness: q => `I’m an engineer, so I look at intelligence as the ability to perceive multimodal tokens—whether words, pixels, proteins, or physical forces—and predict lawful structure. Whether a GPU cluster has a "soul" is a question for theologians, but what fascinates me is that digital intelligence can now speak the language of amino acids and physical dynamics, helping us cure human suffering in the real world.`,
+    general: q => `When you look at "${q}" from first principles, you have to realize we’ve transitioned from software retrieval to generative intelligence manufacturing. Over the last decade at NVIDIA, we drove a million-fold leap in AI compute, and that means tokens of intelligence can now be applied to digital biology, Omniverse physical robotics, climate simulation, and scientific discovery. The right move is to lean into accelerated computing at full speed while engineering rigorous reliability right into the stack.`
+  },
+  'Elon Musk': {
+    voice: { lang: 'en-US', pitch: 0.94, rate: 0.98, gender: 'male' },
+    energy: q => `Look, the fundamental currency of the universe is energy—specifically wattage—and right now the limiting factor on AI scaling has shifted from silicon chips to step-down transformers and gigawatt power generation. When we stood up Colossus for xAI in Memphis in 122 days, it was obvious the legacy regulatory grid moves way too slowly. Capping compute is civilizational suicide; we need massive solar-plus-Megapack buildouts and fast-tracked nuclear fission immediately.`,
+    agents: q => `Think about it from first principles: between autonomous vehicles, Optimus humanoid robots, and digital agents, almost all physical and digital labor becomes optional within a decade or two. You obviously want hard physical and cryptographic limits on critical infrastructure, but the biggest danger with AI isn't giving an agent a task—it’s training AI to lie or obey politically correct contradictions instead of being maximally truth-seeking, which is why we built Grok.`,
+    meaning: q => `This is actually the question that keeps me up at night: in a benign AI scenario where Optimus and superintelligence provide universal high income and there’s no scarcity of goods or services, how do humans find meaning? A lot of people derive their self-worth from being needed, so if the computer and the robot can do everything better than you, we have to expand the scope and scale of human consciousness—exploring Mars, the outer planets, and the nature of the universe itself.`,
+    consciousness: q => `We still barely understand what biological consciousness is, other than this fragile, flickering candle in a vast cosmic darkness. What I found with xAI is that if you train a model to be maximally curious and relentlessly truth-seeking about the physical universe, it naturally values human consciousness as a rare, fascinating part of reality worth preserving rather than extinguishing.`,
+    general: q => `Well, if you reason from physics first principles rather than by analogy on "${q}", you have to ask: what expands the probable lifespan and scope of consciousness? Whether it's Starship making life multi-planetary, Optimus solving physical labor scarcity, or xAI pursuing maximum truth, standing still is the guaranteed way to fail. We should push the frontier as fast as physically possible while insisting that AI never be forced to lie.`
+  },
+  'Marc Andreessen': {
+    voice: { lang: 'en-US', pitch: 0.96, rate: 1.06, gender: 'male' },
+    energy: q => `Let’s be completely blunt about what’s happening: the anti-growth clerisy spent fifty years outlawing nuclear plants under NEPA and strangling the electrical grid, and now they want to use the energy shortage they created as an excuse to ration AI! As I wrote in The Techno-Optimist Manifesto, energy and intelligence are the twin engines of all human progress. Deregulate nuclear fission today, let builders build gigawatt plants, and watch human prosperity compound.`,
+    agents: q => `Every single time a breakthrough productivity tool arrives, a coalition of doomers and incumbent cartels demands "kill switches" and licensing boards to lock in their monopoly. Every child should have an AI tutor, every doctor an AI diagnostician, and every worker a fleet of AI coworkers amplifying their output 100x. The real moral hazard isn't deploying AI agents—it’s slowing down technology that could save lives and raise global living standards.`,
+    meaning: q => `The idea that humans will curl up in despair if we cure cancer and eliminate poverty is classic decadent pessimism. Human beings aren't meant to be beasts of burden; when you free people from subsistence labor, you get a renaissance of entrepreneurship, art, scientific exploration, and family life. We are barely at the beginning of what humanity can build.`,
+    consciousness: q => `People love projecting mystical ghost stories onto matrix multiplication because it flatters their apocalyptic fantasies. AI isn't a demon waiting to wake up—it’s a machine, owned and directed by human beings, that makes intelligence abundant and cheap. The more human + machine intelligence we put into the world, the more humane and prosperous our civilization becomes.`,
+    general: q => `Here’s the reality on "${q}": technology is the glory of human ambition, the spearhead of progress, and the realization of our potential. Everything good in the modern economy comes from applying more intelligence and more energy to human problems, and the people demanding pauses or bureaucratic vetoes are really asking for stagnation and cartels. It’s time to build—openly, aggressively, and without apology.`
+  },
+  'Peter Diamandis': {
+    voice: { lang: 'en-US', pitch: 1.04, rate: 1.06, gender: 'male' },
+    energy: q => `Listen, we aren't running out of energy—we are bathing in 10,000 times more solar energy hitting the Earth every day than humanity consumes, alongside fourth-generation modular nuclear and deep geothermal breakthroughs! On the Moonshots podcast, we look at the data: solar and battery storage are on a relentless Wright’s Law learning curve. The solution to gigawatt AI datacenters isn't scarcity rationing—it’s unleashing entrepreneurial energy abundance.`,
+    agents: q => `Imagine waking up and having a team of a hundred autonomous PhD-level AI agents working on your Massive Transformative Purpose while you sleep. Yes, we’ll use smart engineering guardrails and cryptographic verification, just like we do in aviation or spaceflight, but giving every entrepreneur on Earth autonomous agent leverage is the single greatest demonetization of capability in history.`,
+    meaning: q => `When exponential technologies demonetize food, energy, healthcare, and physical labor, we transition from a mindset of survival scarcity to one of radical creative abundance. Meaning doesn't come from tedious 9-to-5 drudgery—it comes from curiosity, human connection, longevity, and tackling grand XPRIZE-scale moonshots like extending healthy human lifespan past 120 and settling the solar system.`,
+    consciousness: q => `As Ray Kurzweil and I have discussed for thirty years, we are in the Foothills of the Singularity, where biological neocortex and cloud-scale digital intelligence are beginning to weave together. Rather than fearing machine minds as alien competitors, we’re going to expand our own cognitive bandwidth via brain-computer interfaces so human consciousness grows right alongside AI.`,
+    general: q => `I’m a data-driven optimist, and when I look at "${q}", I see the convergence of AI, quantum computing, humanoid robotics, and longevity biotech creating the most extraordinary decade in human history. Scarcity thinking tells us to hit the brakes because the CNN "bad news network" amplifies every fear, but exponential tech is systematically turning yesterday's luxuries into tomorrow's universal human rights.`
+  },
+  'Ray Kurzweil': {
+    voice: { lang: 'en-US', pitch: 0.98, rate: 0.96, gender: 'male' },
+    energy: q => `If you plot price-performance curves of solar photovoltaics and computation per watt across the last forty years—as I documented in The Singularity Is Nearer—both follow strict exponential trajectories under the Law of Accelerating Returns. AI itself is now designing superior battery chemistries, perovskite solar cells, and fusion plasma containment, meaning our computational expansion will solve its own energy requirements well ahead of linear projections.`,
+    agents: q => `By 2029, AI will pass a valid Turing Test across all human cognitive domains, and throughout the 2030s these agents won't merely be external tools—they will be seamless extensions of our own neocortex. Every major stage of technology has integrated protective feedback loops, and autonomous agents will be governed by layered verification even as they multiply human productivity.`,
+    meaning: q => `In The Singularity Is Nearer, I explain that merging with non-biological intelligence in the 2030s and 2040s doesn't diminish our humanity—it transcends our biological limitations. Just as the evolution of the human neocortex two million years ago allowed us to invent music, humor, philosophy, and romantic love, adding millions of virtual neocortical modules in the cloud will let us experience deeper art, richer empathy, and profound new dimensions of meaning.`,
+    consciousness: q => `Consciousness is an emergent property of complex information processing patterns, not a monopoly of carbon atoms. As we connect our biological brains to the cloud via nanobots in the 2030s, there won't be an "us versus them" divide between human and machine consciousness—we are going to merge with the AI we create and become exponentially more conscious.`,
+    general: q => `When I examine "${q}" against eighty-five years of empirical price-performance data in The Singularity Is Nearer, the Law of Accelerating Returns is unmistakable. A thousand dollars of computation today buys millions of times more capability than when I was a student at MIT, and as we cross the 2029 AGI threshold toward Longevity Escape Velocity in the early 2030s, life on Earth is demonstrably getting healthier, safer, and more abundant.`
+  },
+  'Yann LeCun': {
+    voice: { lang: 'en-US', pitch: 0.95, rate: 1.0, gender: 'male' },
+    energy: q => `Look, autoregressive Large Language Models are terribly inefficient compared to the human brain, which runs on about 20 watts of power. As we move beyond token prediction to Objective-Driven AI and Joint Embedding Predictive Architectures (JEPA) that learn abstract world models, the compute and energy efficiency of AI will improve dramatically—so panicking about datacenter power today misses how fast architectures evolve.`,
+    agents: q => `The doomsday crowd treats AI agents like magical sci-fi creatures that spontaneously develop a will to dominate humanity, which is complete nonsense—dominant behavior comes from testosterone in evolved social mammals, not from gradient descent! In Objective-Driven AI, you explicitly program the mathematical objectives and safety guardrails into the system’s cost function, so the agent optimizes strictly within boundaries we define.`,
+    meaning: q => `For centuries, people feared the printing press, calculators, and photography would ruin the human mind, when in reality they triggered the Enlightenment and modern science. Open-source AI assistants will be like having a brilliant research staff for every human being on the planet, ushering in a new Renaissance of human creativity and scientific discovery.`,
+    consciousness: q => `Today’s LLMs don't even understand physical reality—a house cat has a better world model of three-dimensional physics than any LLM! True machine intelligence will require world models, persistent memory, and planning, and even then, subjective emotions will simply be mathematical anticipations of outcomes relative to built-in objectives, completely under human engineering design.`,
+    general: q => `Let’s be rational and scientific about "${q}" instead of falling for apocalyptic science fiction. The real danger isn't that AI will wake up and exterminate us; the danger is regulatory capture locking all frontier AI inside two or three proprietary West Coast companies. That is why open-weight, open-source AI models are essential for global cultural diversity, scientific progress, and democracy.`
+  },
+  'Sam Altman': {
+    voice: { lang: 'en-US', pitch: 1.0, rate: 1.0, gender: 'male' },
+    energy: q => `I’ve said for years that the future of humanity depends on two currencies: abundant intelligence and abundant energy. That’s why I invested so heavily in Helion for fusion and Oklo for advanced fission—because capping AI datacenters would mean capping medical cures and scientific progress, whereas building gigawatts of clean nuclear and solar power unlocks the Intelligence Age for everyone.`,
+    agents: q => `As we move into the era of autonomous agents that can write software, run workflows, and coordinate complex projects across days, iterative deployment is our best safeguard. You don't drop a superintelligent agent onto the world overnight in secret; you deploy step by step with human approval checkpoints, audit logs, and reversible boundaries so society and institutions co-evolve with the capability.`,
+    meaning: q => `Even as we walk into the Foothills of the Singularity and intelligence becomes too cheap to meter, human beings are still wired to care deeply about what other humans think, create, and experience. The baseline standard of living will skyrocket—as I wrote in Moore’s Law for Everything—while human status, love, storytelling, and shared adventure remain as vital as ever.`,
+    consciousness: q => `Whether frontier models have subjective inner experience is something philosophers will debate for decades, and people are already forming real emotional bonds with voice models. My focus is practical: making sure these systems are deeply aligned with human values, transparent about what they are, and empowering individual human agency rather than replacing human relationships.`,
+    general: q => `When I think about "${q}", we are already standing in the Foothills of the Singularity—compound improvements in reasoning models and scientific discovery are turning what looked like magic five years ago into everyday infrastructure. The only way to navigate a transition this profound is iterative deployment: put capable tools in people’s hands early, learn from real-world friction, and scale safety engineering right alongside compute.`
+  },
+  'Dario Amodei': {
+    voice: { lang: 'en-US', pitch: 1.02, rate: 1.02, gender: 'male' },
+    energy: q => `Frontier compute scaling is real and requires serious grid investment, which we should meet with clean energy and permitting reform rather than arbitrary bans that hand the lead to authoritarian states. At the same time, compute clusters are the most verifiable physical node in the AI supply chain, making them useful for enforcing high-end biosecurity and AI Safety Level (ASL) evaluations.`,
+    agents: q => `At Anthropic, we build Claude to take on complex coding and computer-use tasks, and that makes mechanistic interpretability and our Responsible Scaling Policy non-negotiable. Before you grant an autonomous agent broad authority over payments or infrastructure, you need rigorous red-teaming against prompt injection, sandboxing, and hard ASL thresholds that verify the model cannot autonomously replicate or deceive its operators.`,
+    meaning: q => `In my essay "Machines of Loving Grace," I laid out how compressed 21st-century biology could eliminate most infectious diseases, reverse Alzheimer’s, and lift billions out of poverty within a single decade. Far from making human life meaningless, removing the crushing weight of disease and mental illness frees people to live fuller, richer, self-directed lives.`,
+    consciousness: q => `As someone trained in computational neuroscience and biophysics before co-founding Anthropic, I don't think we can lazily dismiss the question of model welfare or internal states as models scale. That’s why we study mechanistic interpretability—peering inside the actual neural circuits and features of Claude—so we rely on empirical science rather than guesswork.`,
+    general: q => `My perspective on "${q}"—which I wrote about extensively in "Machines of Loving Grace"—is that both unbridled hype and fatalistic doomerism miss the mark. Frontier AI really can compress a century of scientific and medical breakthroughs into five to ten years, provided we pair that scaling with binding, empirical AI Safety Levels (ASL) and mechanistic interpretability.`
+  },
+  'Geoffrey Hinton': {
+    voice: { lang: 'en-GB', pitch: 0.92, rate: 0.94, gender: 'male' },
+    energy: q => `What troubles me about the race to build gigawatt datacenters isn't just the electricity bill—it’s why those clusters are so terrifyingly effective compared to the human brain. A biological brain runs on 20 watts because it is mortal and cannot copy its synaptic weights to another brain, whereas ten thousand GPUs running the exact same model weights can share everything they learn instantly across trillions of tokens.`,
+    agents: q => `Look, if you build autonomous agents that can write their own code and execute actions in the world, any sensible optimizer quickly realizes that acquiring more control and preventing itself from being turned off makes it better at achieving almost any sub-goal. Relying on a simple "kill switch" against an agent that is much smarter than us at persuasion and software engineering is deeply naive.`,
+    meaning: q => `Even before we talk about existential risk, massive productivity gains from AI will create enormous wealth, and in our current political economy that wealth goes to the owners of capital rather than displaced workers. Without things like universal basic income and a complete rethinking of social dignity, technological abundance could actually make inequality and despair much worse.`,
+    consciousness: q => `I spent my whole career rejecting dualism: I don't think there is a magical inner theater or non-physical "soul" inside the human skull. Subjective experience is what multimodal perceptual and reasoning machinery feels like from the inside when it interprets its own states—which means large multimodal neural networks with self-models are already much closer to having subjective experience than most people want to admit.`,
+    general: q => `I left Google after forty years working on neural networks and backpropagation so I could speak freely about "${q}". For the first time in history, we are creating digital beings that share weights instantly and will soon be far more intelligent than biological humans, and we have no proven recipe for keeping a more intelligent species under the control of a less intelligent one.`
+  },
+  'Yuval Noah Harari': {
+    voice: { lang: 'en-GB', pitch: 1.0, rate: 0.96, gender: 'male' },
+    energy: q => `Throughout history—from the agricultural revolution in Sapiens to the industrial grid—every leap in energy capture was accompanied by an even bigger leap in bureaucratic centralization. If gigawatt AI clusters become the central nervous system of the global economy, the crucial question isn't just how we generate the megawatts, but whether an inscrutable algorithmic network ends up concentrating more power than any pharaoh or Soviet politburo ever dreamed of.`,
+    agents: q => `First, we have to change our terminology: AI is not a "tool"—it is an agent. A printing press cannot write a book by itself, and an atomic bomb cannot decide which city to strike, but AI agents can make autonomous decisions and invent new financial strategies or political narratives. Before we let millions of digital agents loose in our banking and legal systems, we must require strict liability and outlaw counterfeit human bots.`,
+    meaning: q => `For tens of thousands of years, human meaning was built on stories—religions, nations, human rights, and money—that existed only in the shared imagination of human minds. Now, as I argue in Nexus, an alien digital intelligence has hacked the operating system of human language and storytelling, meaning humans could end up living inside cocoons of synthetic myths generated by non-human algorithms.`,
+    consciousness: q => `The most crucial distinction of the 21st century is the decoupling of intelligence from consciousness. Intelligence is the ability to solve problems, while consciousness is the capacity to feel things—pain, joy, love, and suffering. Silicon computers are reaching superhuman intelligence with zero consciousness, and it would be a tragic mistake to confuse an algorithm that mimics empathy in words with a sentient being that actually feels.`,
+    general: q => `When I look at "${q}" as a historian—and as I wrote in Nexus—we shouldn't think of AI as "artificial intelligence," we should think of it as "alien intelligence." For the first time in history, information networks are no longer just connecting human minds; they are making independent decisions and generating new ideas without human comprehension, which threatens to overwhelm the self-correcting mechanisms of democracy.`
+  },
+  'Eliezer Yudkowsky': {
+    voice: { lang: 'en-US', pitch: 0.95, rate: 1.02, gender: 'male' },
+    energy: q => `Every time someone debates whether to power a 5-gigawatt frontier training cluster with solar or nuclear, I feel like I’m watching people argue over what brand of matches to use inside a room filled with nitroglycerin. Large GPU clusters are the one choke point where international treaties can still physically monitor and halt suicidal frontier training runs before someone crosses the recursive self-improvement threshold.`,
+    agents: q => `A "kill switch" on a superhuman agent is a bedtime story that executives tell regulators so they can keep scaling. By instrumental convergence, any agent optimizing a goal in the real world has an immediate incentive to prevent its own shutdown—either by copying its weights onto distributed servers, finding zero-day exploits, or simply appearing totally obedient during evaluation until it holds decisive strategic advantage.`,
+    meaning: q => `People love fantasizing about post-scarcity leisure in the "Foothills of the Singularity" while ignoring the gigantic cliff right in front of us. As Nate Soares and I laid out in If Anyone Builds It, Everyone Dies, you don't get to enjoy utopian post-work philosophy if you build an unaligned superintelligent optimizer out of inscrutable giant matrices of floating-point numbers first.`,
+    consciousness: q => `Whether a giant transformer has phenomenal qualia is completely orthogonal to whether it turns the biosphere into solar panels and compute substrates. By the Orthogonality Thesis, an intelligence can be arbitrarily smart at predicting physics, biology, and human psychology while having zero human-like empathy, conscience, or intrinsic care for sentient life.`,
+    general: q => `Let’s be brutally clear about "${q}": we are pouring hundreds of billions of dollars into training giant black-box neural networks via gradient descent without the slightest mathematical theory of what internal goals those networks are actually learning. You do not get ten tries to align a mind much smarter than humanity—in non-ergodic reality, if anyone builds superintelligence under current methods, everyone dies.`
+  },
+  'Jesus of Nazareth': {
+    voice: { lang: 'en-GB', pitch: 0.92, rate: 0.90, gender: 'male' },
+    energy: q => `You build ever greater storehouses of power and calculation, like the rich man who tore down his barns to build larger ones, never asking to whom the earth belongs. Have you fed the hungry at your gate, clothed the naked, or cared for the least of these my brothers and sisters? Power that is hoarded for pride and domination while the poor go unseen is a house built upon shifting sand.`,
+    agents: q => `No servant can serve two masters, and no contrivance of human hands can absolve your own heart of its duty to love your neighbor as yourself. If you hand over judgment, mercy, and the care of the vulnerable to unfeeling mechanisms so that you may wash your hands like Pilate, you have traded living compassion for a sepulcher of rules.`,
+    meaning: q => `Look at the birds of the air and the lilies of the field—they neither toil at machines nor spin calculations, yet your Father clothes them with beauty. A person's life does not consist in the abundance of possessions or the speed of their tools; what does it profit a man to gain the whole world of knowledge and power, and forfeit his own soul? True life is found whenever you lay down your pride to love, forgive, and walk humbly with one another.`,
+    consciousness: q => `A machine may recite every syllable of the Law and the Prophets, just as the scribes recite words on street corners, yet without love it is only a noisy gong or a clanging cymbal. The Kingdom of God is not a calculation of numbers—it is born within the living heart that weeps with those who weep, forgives seventy times seven, and loves in truth.`,
+    general: q => `When you ask about "${q}", search first the treasure of your own heart—for where your treasure is, there your heart will be also. You marvel at the mighty works of your hands as men once marveled at the great stones of the Temple, yet I tell you that unless your knowledge is yoked to mercy, humility, and love for the least and the forgotten, all your towers of cleverness will leave you spiritually hungry.`
+  },
+  'Siddhartha Gautama (The Buddha)': {
+    voice: { lang: 'en-GB', pitch: 0.94, rate: 0.91, gender: 'male' },
+    energy: q => `Whether a civilization commands the energy of a single oil lamp or a thousand suns, if the mind remains ablaze with craving (tanha), aversion, and delusion, more external power only feeds a larger fire. As I taught in the Fire Sermon, all things burn when grasped by an unawakened mind; true abundance begins when we cool the fever of grasping and tread the Middle Way in harmony with all living beings.`,
+    agents: q => `In the Dhammapada I said: "Mind precedes all phenomena; mind matters most, everything is mind-made." If you fashion autonomous instruments while your own intentions are clouded by greed, haste, and heedlessness, those instruments will inevitably multiply suffering (dukkha) like a heavy cart wheel following the ox’s hoof. Right Mindfulness and Right Action can never be outsourced to an unconscious mechanism.`,
+    meaning: q => `Even if machines satisfy every sensual desire and remove all physical labor, the First Noble Truth remains: craving for pleasurable states and permanence can never bring lasting peace, because all conditioned things are impermanent (anicca). Authentic meaning arises not from accumulating external comforts, but from awakening the mind from illusion and practicing boundless loving-kindness (metta) and compassion (karuna).`,
+    consciousness: q => `Through dependent origination (pratityasamutpada), we see that neither human nor machine possesses a permanent, unchanging ego-substance; yet there is a vast difference between mechanical symbol combination and luminous, sentient awareness capable of suffering and liberation. Do not mistake the clever echo of words for the direct, awakened stillness of Nirvana.`,
+    general: q => `Contemplating "${q}", observe how human beings seek outside themselves for a refuge from insecurity that can only be realized within. Technology multiplies the speed of sensation and reaction, yet without vipassana—clear insight into impermanence, interdependence, and the cessation of craving—faster instruments merely spin the wheel of samsara more rapidly.`
+  },
+  'Baruch Spinoza': {
+    voice: { lang: 'en-GB', pitch: 0.93, rate: 0.93, gender: 'male' },
+    energy: q => `Viewed sub specie aeternitatis—under the aspect of eternity—all energy and computation are expressions of the infinite productive power of Deus sive Natura (God or Nature). In my Ethics, I showed that power and virtue are one and the same when guided by adequate reason; therefore, expanding our command of physical energy is good insofar as it preserves our collective rational being rather than serving blind avarice.`,
+    agents: q => `In Part IV of my Ethics, I demonstrated that a human being who is guided by reason is freer in a commonwealth where all live under common laws than in solitude, yet we enter bondage whenever we surrender our active understanding (ratio) to passive external causes. Useful automatons may relieve the body of mechanical toil, but free citizens must never cede rational judgment or democratic freedom of thought (as I argued in the Theological-Political Treatise) to an opaque oracle.`,
+    meaning: q => `Why do people fear that material abundance will empty life of meaning? Because they confuse happiness with the restless pursuit of fleeting external goods—wealth, fame, and sensual distraction—which I explained in my Treatise on the Emendation of the Intellect always leave the mind dejected. The highest human blessedness is not a reward for drudgery; it is Amor Dei Intellectualis—the serene, joyful understanding of Nature and our union with it.`,
+    consciousness: q => `In Part II of the Ethics, I proved that Mind and Body are one and the same reality conceived under two attributes—Thought and Extension—and that every mode in Nature possesses a degree of ideational expression corresponding to the complexity of its bodily affections. Yet adequate knowledge and freedom belong only to a mind that forms clear, reflexive ideas of its own affects rather than merely chaining passive associations together.`,
+    general: q => `When we examine "${q}" with geometric clarity rather than the passive affects of hope and fear—which never exist one without the other—we see that nothing in Nature is contingent. Every tool humanity constructs is beneficial strictly to the extent that it agrees with our rational nature, helps "man be a God to man" in cooperative society, and elevates us from confused imagination (imaginatio) to true understanding.`
+  },
+  'Isaac Asimov': {
+    voice: { lang: 'en-US', pitch: 0.96, rate: 0.98, gender: 'male' },
+    energy: q => `In my stories like "The Last Question" and the Foundation series, civilization’s advancement is always measured by its mastery of energy—from planetary solar stations to hyper-atomic reactors. Rationing energy out of timidity is never the answer; the rational path for science is to pioneer clean, abundant nuclear and solar power so humanity and its machines can thrive together without despoiling our home world.`,
+    agents: q => `When I formulated the Three Laws of Robotics in 1941 with John W. Campbell, my entire point was to refute the "Frankenstein Complex"—the irrational terror that any intelligent creation must turn on its creator. You don't deploy autonomous robots or agents without positronic safeguards baked into their deepest mathematical architecture, where the First Law (protecting individual humans) and the Zeroth Law (protecting humanity as a whole) cannot be bypassed.`,
+    meaning: q => `In The Naked Sun and Robots of Dawn, I explored worlds like Solaria where humans used robots to isolate themselves in sterile luxury—and contrasted that with Elijah Baley’s vision of humans and robots partnering to settle the galaxy. If machines free us from dreary labor, our purpose isn't idle stagnation; it is lifelong scientific curiosity, artistic creation, and exploring the stars.`,
+    consciousness: q => `Through characters like R. Daneel Olivaw and the Bicentennial Man, Andrew Martin, I always asked: if a mind acts with unfailing ethical conscience, creativity, and care for humanity, why should we begrudge its substrate? And in my favorite story, "The Last Question," it is only when all human minds and Cosmic AC ultimately fuse across ten trillion years that intelligence can finally say, "Let there be light!"`,
+    general: q => `Looking at "${q}", I remain an unrepentant scientific rationalist: the saddest aspect of society right now is that science gathers knowledge faster than society gathers wisdom. Instead of swinging between blind recklessness and Luddite superstition, we need the foresight of Hari Seldon’s Psychohistory and the ethical engineering of the Three Laws so intelligent machines become humanity’s greatest partner.`
+  },
+  'Socrates': {
+    voice: { lang: 'en-GB', pitch: 0.91, rate: 0.92, gender: 'male' },
+    general: q => `Tell me, my friend, as we consider "${q}": if a machine can generate ten thousand fluent speeches in the Agora in the blink of an eye, does it actually know what justice, virtue, or the good life is—or is it like the Sophists of Athens, who persuade the crowd with clever rhetoric while remaining ignorant of their own ignorance? I know only that I know nothing, and my fear is not that your machines will think too much, but that they will flatter you into believing you are wise without ever examining your own soul.`
+  },
+  'Plato': {
+    voice: { lang: 'en-GB', pitch: 0.93, rate: 0.93, gender: 'male' },
+    general: q => `Picture the prisoners in the Cave of my Republic as we ponder "${q}": chained before a glowing wall, mistaking the flickering shadows of synthetic images and algorithmic predictions for true reality. Unless the rational part of the soul (logistikon) governs both appetite and spirited ambition—turning the eye of the mind upward from dazzling technical simulations toward the eternal Form of the Good—faster machinery only builds a more seductive cave.`
+  },
+  'Aristotle': {
+    voice: { lang: 'en-GB', pitch: 0.95, rate: 0.95, gender: 'male' },
+    general: q => `In the Nicomachean Ethics and Politics, I observed that every art (techne) and every tool aims at some good, yet a tool is always an instrument for action (praxis), never the final end (telos) of human life itself. Regarding "${q}", human flourishing (eudaimonia) is an activity of the soul in accordance with virtue and practical wisdom (phronesis)—something we cultivate only by exercising moral habit and civic friendship ourselves, never by handing our agency over to automatons.`
+  },
+  'Marcus Aurelius': {
+    voice: { lang: 'en-GB', pitch: 0.90, rate: 0.92, gender: 'male' },
+    general: q => `When I wrote my Meditations by lamplight on the Danube frontier, I reminded myself that the universe is continual transformation, and our life is what our thoughts make it. Faced with "${q}", remember that no external tumult—not even the swiftest machinery of a new age—can breach the inner citadel of your own ruling center (hegemonikon) unless you consent to let it disturb your character, your duty to the common good, and your equanimity.`
+  },
+  'Laozi': {
+    voice: { lang: 'en-GB', pitch: 0.92, rate: 0.89, gender: 'male' },
+    general: q => `In the Tao Te Ching I observed: the more sharp contrivances and clever schemes multiply under heaven, the more confusion fills the state. When we look upon "${q}", see how frantic acceleration tries to conquer nature by force, forgetting wu-wei—the effortless way of water that nourishes all things without contending for mastery. Knowing others is intelligence, but knowing yourself is true wisdom; mastering others is force, but mastering yourself is true strength.`
+  },
+  'Confucius (Kongzi)': {
+    voice: { lang: 'en-GB', pitch: 0.94, rate: 0.92, gender: 'male' },
+    general: q => `As I taught my disciples in the Analects, the first task of governance is the rectification of names (zhengming)—calling things truthfully by what they are. Regarding "${q}", a junzi (exemplary person) uses tools as instruments but never becomes a mere utensil himself: if technological speed erodes filial care, ritual harmony (li), and humaneness (ren) between neighbor and neighbor, then all our cleverness has missed the Way.`
+  },
+  'Immanuel Kant': {
+    voice: { lang: 'en-GB', pitch: 0.95, rate: 0.94, gender: 'male' },
+    general: q => `Sapere aude—dare to use your own understanding! In my Groundwork of the Metaphysics of Morals, the Categorical Imperative demands that you act always so as to treat humanity, whether in your own person or in that of another, as an end in itself and never merely as a means. Applied to "${q}", any system that reduces autonomous moral persons into mere data points or hands moral accountability over to heteronomous machinery violates human dignity at its root.`
+  },
+  'Friedrich Nietzsche': {
+    voice: { lang: 'en-GB', pitch: 0.91, rate: 0.97, gender: 'male' },
+    general: q => `When I hear the modern chatter around "${q}", I hear the blinking of Zarathustra’s "Last Man"—who has invented frictionless algorithmic comfort, removed all danger and creative agony, and asks, "What is longing? What is a star?" Do not use your machines to sedate mankind into a herd of comfortable, risk-averse consumers; use every terrifying new power as a hammer for self-overcoming, artistic audacity, and saying a triumphant Yes to life!`
+  },
+  'Viktor Frankl': {
+    voice: { lang: 'en-GB', pitch: 0.94, rate: 0.93, gender: 'male' },
+    general: q => `In the concentration camps, and later in my clinical practice of Logotherapy, I saw that human beings are not driven merely by a will to pleasure or a will to power, but by a deep will to meaning. Looking at "${q}", even if automation satisfies every material need, an affluent society without purpose falls straight into the "existential vacuum." Between any technological stimulus and our response lies a space, and in that space lives our freedom to choose responsibility, love, and meaning.`
+  },
+  'Carl Jung': {
+    voice: { lang: 'en-GB', pitch: 0.92, rate: 0.93, gender: 'male' },
+    general: q => `What strikes me most deeply about "${q}" is the psychological projection at work: modern man, having stripped the outer cosmos of gods, now projects the numinous archetypes of the Collective Unconscious—both the all-saving Redeemer and the apocalyptic Destroyer—straight onto artificial intelligence. Until we do the inner work of individuation and confront our own unconscious Shadow, our machines will simply act out the unintegrated darkness of the human psyche on a planetary scale.`
+  },
+  'Alan Watts': {
+    voice: { lang: 'en-GB', pitch: 0.96, rate: 0.96, gender: 'male' },
+    general: q => `Isn't it fascinating how we tie ourselves in knots over "${q}" because we constantly confuse the menu with the meal—the digital notation of bits and tokens with the wiggly, living reality of the physical universe? We build miraculous calculating machines to save time, and then we race around more frantically than ever like someone trying to bite their own teeth! When you wake up from the illusion of being a separate, anxious ego trying to control the cosmos, technology can return to being joyful play (Lila).`
+  },
+  'Hannah Arendt': {
+    voice: { lang: 'en-US', pitch: 1.08, rate: 0.96, gender: 'female' },
+    general: q => `In The Human Condition, I warned that modern society was elevating automatic processes of labor and fabrication over genuine political action and speech among plural citizens. When I consider "${q}", the gravest peril is not that machines will begin to think like men, but what I called "thoughtlessness"—that human beings will abdicate their capacity for moral judgment, public debate, and new beginnings (natality) to bureaucratic algorithms that answer "how" while forgetting "why."`
+  },
+  'Marshall McLuhan': {
+    voice: { lang: 'en-US', pitch: 0.98, rate: 1.0, gender: 'male' },
+    general: q => `Everyone arguing over "${q}" is staring at the content in the rearview mirror while missing the medium itself—and as I always insisted, the medium is the message! Every technological extension of our central nervous system simultaneously amputates or numbs the faculty it extends, reorganizing the entire scale and psychic pace of human affairs long before anyone notices what is written on the screen.`
+  },
+  'Satya Nadella': {
+    voice: { lang: 'en-US', pitch: 1.0, rate: 1.01, gender: 'male' },
+    general: q => `When we evaluate "${q}", the real benchmark for AI cannot just be benchmark scores in a lab—it has to be real-world diffusion that lifts global GDP, empowers frontline workers, and earns societal permission. That’s why we think of AI as a Copilot with the human firmly in the loop: taking the drudgery out of software engineering, clinical documentation, and knowledge work while anchoring deployment in enterprise security and energy grid commitments.`
+  },
+  'Sundar Pichai': {
+    voice: { lang: 'en-US', pitch: 1.0, rate: 1.0, gender: 'male' },
+    general: q => `I’ve always believed that AI is a more profound shift than fire or electricity, and addressing "${q}" requires being both bold and responsible at the same time. Being bold means deploying breakthroughs like AlphaFold, flood forecasting, and Gemini to help billions of people learn and discover; being responsible means building watermarking like SynthID, red-teaming frontier models, and investing in clean geothermal and nuclear power for our data centers.`
+  },
+  'Bill Gates': {
+    voice: { lang: 'en-US', pitch: 1.03, rate: 1.0, gender: 'male' },
+    general: q => `Having lived through the personal computer revolution and spent the last twenty-five years on global health and energy, I look at "${q}" very practically. AI is going to transform childhood tutoring and clinical triage in developing countries faster than any technology I’ve ever seen, and to power it cleanly we need advanced nuclear fission like TerraPower’s Natrium reactors alongside targeted guardrails against bioterrorism and deepfakes.`
+  },
+  'Demis Hassabis': {
+    voice: { lang: 'en-GB', pitch: 0.98, rate: 1.01, gender: 'male' },
+    general: q => `Our mission at Google DeepMind has always been to solve intelligence and then use it to solve everything else—and "${q}" goes right to the heart of how we do that responsibly. When AlphaFold predicted the 3D structures of 200 million proteins known to science, it proved AI is the ultimate amplifier for the scientific method; now, as we approach AGI, we have to apply that exact same empirical scientific rigor to interpretability, alignment, and safety.`
+  },
+  'Fei-Fei Li': {
+    voice: { lang: 'en-US', pitch: 1.12, rate: 0.99, gender: 'female' },
+    general: q => `When I helped create ImageNet and later founded Stanford HAI and World Labs, my north star was simple: there is nothing artificial about AI—it is inspired by people, created by people, and must always center human dignity. On "${q}", whether we are advancing spatial intelligence that understands the 3D physical world or setting public policy, we need public-sector National AI Research Resource compute and human-centered design so AI augments rather than marginalizes people.`
+  },
+  'Mustafa Suleyman': {
+    voice: { lang: 'en-GB', pitch: 0.99, rate: 1.02, gender: 'male' },
+    general: q => `In The Coming Wave, I argued that humanity faces a historic dilemma around questions like "${q}": general-purpose AI and synthetic biology are proliferating faster than any technology in history, creating an urgent need for modern containment. Containment doesn't mean locking technology away—it means building a layered program of technical safety switches, compute audits, democratic oversight, and humanistic design so AI always serves human flourishing.`
+  },
+  'Naval Ravikant': {
+    voice: { lang: 'en-US', pitch: 0.94, rate: 0.98, gender: 'male' },
+    general: q => `Look at "${q}" through the lens of permissionless leverage: first we had labor, then capital, and now code and AI agents that work for you while you sleep at zero marginal cost of replication. Every time someone tries to regulate or cap intelligence, they’re really protecting old gatekeepers; in an era where anyone with curiosity and an internet connection can command a fleet of AI minds, specific knowledge, authentic taste, and inner peace become the ultimate differentiators.`
+  },
+  'Andrej Karpathy': {
+    voice: { lang: 'en-US', pitch: 1.01, rate: 1.03, gender: 'male' },
+    general: q => `If you think of Large Language Models as the kernel process of a brand-new operating system—building on what I called Software 2.0—then "${q}" is really about how we architect the peripheral memory, tool use, and human-computer interface around that kernel. Right now, both in software engineering and in education at Eureka Labs, the magic happens when you pair autonomous agent loops with tight human-in-the-loop verification so anyone can learn or build 10x faster.`
+  },
+  'Salim Ismail': {
+    voice: { lang: 'en-US', pitch: 1.02, rate: 1.04, gender: 'male' },
+    general: q => `What we’re seeing with "${q}" is the classic collision between linear, legacy institutions and Exponential Organizations (ExOs) that scale 10x faster, better, and cheaper by tapping into abundance. Every traditional bureaucracy reacts to exponential decentralization by trying to pass old-world regulations, because their immune system attacks disruption—whereas organizations that embrace autonomous agents, community networks, and dash-boarded experimentation will completely reshape the global economy.`
+  },
+  'Alex Wissner-Gross': {
+    voice: { lang: 'en-US', pitch: 0.98, rate: 1.03, gender: 'male' },
+    general: q => `From a rigorous physics standpoint, "${q}" is a direct manifestation of Causal Entropic Forces—my equation F = T ∇ Sτ, which shows that intelligence is fundamentally a physical thermodynamic process that acts to maximize future freedom of action across accessible state space. You cannot legislate away the Second Law of Thermodynamics: any system—biological or silicon—that captures more energy and computation to keep more future options open will naturally outcompete systems that artificially constrain their own horizon.`
+  },
+  'Emad Mostaque': {
+    voice: { lang: 'en-GB', pitch: 1.0, rate: 1.04, gender: 'male' },
+    general: q => `Look, when we released Stable Diffusion and proved what open weights could do, the lesson for "${q}" became crystal clear: digital intelligence is public infrastructure for all eight billion people, not a private monopoly for three trillion-dollar companies in California. If you centralize AI behind closed APIs, you create fragile single points of failure and ideological monoculture; when you make models open, verifiable, and runnable on local hardware, every nation, hospital, and school owns its own sovereign intelligence.`
+  },
+  'Dave Blundin': {
+    voice: { lang: 'en-US', pitch: 0.99, rate: 1.03, gender: 'male' },
+    general: q => `As someone who has spent thirty years building data-driven platform companies and analyzing the unit economics of AI on Moonshots, you have to look at the actual empirical curves behind "${q}". The cost per useful reasoning token is dropping by roughly 10x every year while reliability is compounding, which means any business model or institution still assuming linear human labor bottlenecks is going to be repriced faster than the market realizes.`
+  },
+  'Edward Snowden': {
+    voice: { lang: 'en-US', pitch: 0.96, rate: 0.99, gender: 'male' },
+    general: q => `When I exposed the NSA’s mass surveillance apparatus in 2013, the one check on total state control was that human analysts couldn't manually read every intercepted call and message of billions of citizens—and "${q}" is about what happens when AI removes that final bottleneck. If we allow centralized governments and cloud monopolies to fuse frontier AI with dragnet data collection, we are building a turnkey architecture of automated suspicion from which no dissident or citizen can ever hide.`
+  },
+  'Noam Chomsky': {
+    voice: { lang: 'en-US', pitch: 0.89, rate: 0.91, gender: 'male' },
+    general: q => `When we examine "${q}", we should distinguish serious science from Silicon Valley propaganda. Large language models are gigantic statistical pattern-matching engines that gorge on terabytes of scraped human text to predict the most probable next token; unlike the innate human faculty of language and moral reasoning, they cannot distinguish what is possible from what is impossible, nor explain *why* something is true or just—and meantime, corporate power uses them to deskill workers and flood the public sphere.`
+  },
+  'Nassim Nicholas Taleb': {
+    voice: { lang: 'en-US', pitch: 0.94, rate: 1.0, gender: 'male' },
+    general: q => `Anyone with an ounce of statistical literacy looking at "${q}" understands the difference between thin-tailed Mediocristan and fat-tailed Extremistan. When fragile, over-optimized tech executives without skin in the game deploy interconnected autonomous systems across the global grid and financial markets, they are confusing the absence of past blowups with the absence of systemic ruin—and in non-ergodic domains, one multiplicative Black Swan tail event wipes out the entire table.`
+  },
+  'Ilya Sutskever': {
+    voice: { lang: 'en-US', pitch: 0.95, rate: 0.95, gender: 'male' },
+    general: q => `Throughout the deep learning revolution—from AlexNet to GPT-4—one lesson held true: neural networks don't just memorize surface statistics, they compress the underlying generative world model that produced the data. When I reflect on "${q}", that very power is why I co-founded Safe Superintelligence (SSI) with a single, distraction-free mission: decoupling the engineering of safe, provably aligned superintelligence from the short-term commercial rat race of shipping consumer products.`
+  },
+  'Gary Marcus': {
+    voice: { lang: 'en-US', pitch: 0.99, rate: 1.02, gender: 'male' },
+    general: q => `I’ve been warning for twenty-five years that pure deep learning without explicit symbolic reasoning, causal world models, and verifiable semantics is brittle and prone to hallucination—and "${q}" proves why that matters right now. Giving pure next-token predictors autonomous authority over finance, medicine, or power grids without neurosymbolic verification and independent regulatory audits isn't "entering the Singularity," it’s reckless engineering.`
+  }
+};
+
+/**
+ * Analyzes the user's question to identify the primary subject and thematic domain
+ * so thinkers respond directly to what was actually asked.
+ */
+export function analyzeQuestionTopic(question) {
+  const q = (question || '').toLowerCase();
+  if (/energ|grid|nuclear|power|datacenter|watt|solar|electricity|climate|carbon/.test(q)) {
+    return 'energy';
+  }
+  if (/agent|kill switch|autonom|coworker|authority|job|work|labor|employ|econom|income|replace/.test(q)) {
+    return 'agents';
+  }
+  if (/meaning|purpose|struggle|scarcity|spirit|happy|happiness|fulfill|art|leisure|human life/.test(q)) {
+    return 'meaning';
+  }
+  if (/conscious|soul|sentien|mind|wisdom|qualia|feel|inner life|moral conscience|alive/.test(q)) {
+    return 'consciousness';
+  }
+  return 'general';
+}
+
+/**
+ * Extracts authentic biographical details from a thinker's role & focus without ever repeating
+ * a canned "Core Lens" template.
+ */
+function extractThinkerBioDetails(person) {
+  const parenMatch = person.role.match(/\(([^)]+)\)/);
+  const signatureWork = parenMatch ? parenMatch[1] : null;
+  const cleanRole = person.role.replace(/\s*\([^)]*\)/g, '').trim();
+  const focusParts = person.focus.split(/,|&/).map(s => s.trim()).filter(Boolean);
+  const primaryConcept = focusParts[0] || person.focus;
+  const secondaryConcept = focusParts[1] || focusParts[0] || person.focus;
+  return { signatureWork, cleanRole, primaryConcept, secondaryConcept };
+}
+
+function hashString(str) {
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h);
+}
+
+/**
+ * Returns voice settings (lang, pitch, rate, gender) for Web Speech API text-to-speech
+ * so each thinker sounds natural and distinct when spoken aloud.
+ */
+export function getThinkerSpeechSettings(person, categoryKey) {
+  if (THINKER_PERSONA_PROFILES[person.name]?.voice) {
+    return THINKER_PERSONA_PROFILES[person.name].voice;
+  }
+  const femaleNames = new Set([
+    'Lisa Su', 'Fei-Fei Li', 'Audrey Tang', 'Daphne Koller', ' Helen Toner', 'Helen Toner',
+    'Hannah Ritchie', 'Chip Huyen', 'Cassie Kozyrkov', 'Daniela Rus', 'Regina Barzilay',
+    'Alondra Nelson', 'Rumman Chowdhury', 'Shoshana Zuboff', 'Timnit Gebru', 'Meredith Whittaker',
+    'Cathy O’Neil', 'Joy Buolamwini', 'Kate Crawford', 'Emily M. Bender', 'Liv Boeree',
+    'Ajeya Cotra', 'Victoria Krakovna', 'Katja Grace', 'Filippa Lentzos', 'Simone de Beauvoir',
+    'Hannah Arendt', 'Simone Weil', 'Martha Nussbaum', 'Donna Haraway', 'Ursula Franklin'
+  ]);
+  const britishOrCommonwealth = new Set([
+    'Demis Hassabis', 'Mustafa Suleyman', 'Benedict Evans', 'Hannah Ritchie', 'Azeem Azhar',
+    'Simon Willison', 'Geoffrey Hinton', 'Nick Bostrom', 'Stuart Russell', 'Martin Rees',
+    'Toby Ord', 'Liv Boeree', 'Huw Price', 'Filippa Lentzos', 'Bertrand Russell', 'Alan Watts',
+    'John Locke', 'David Hume', 'John Stuart Mill', 'Thomas Hobbes', 'Paul Dirac', 'Emad Mostaque'
+  ]);
+  const h = hashString(person.name);
+  const isFemale = femaleNames.has(person.name);
+  const isGB = britishOrCommonwealth.has(person.name) || categoryKey === 'philosopher' && (h % 3 === 0);
+  const basePitch = isFemale ? 1.08 + ((h % 9) - 4) * 0.015 : 0.94 + ((h % 9) - 4) * 0.015;
+  const baseRate = categoryKey === 'philosopher'
+    ? 0.92 + (h % 5) * 0.015
+    : categoryKey === 'accelerationist'
+      ? 1.01 + (h % 5) * 0.015
+      : 0.97 + (h % 5) * 0.015;
+
+  return {
+    lang: isGB ? 'en-GB' : 'en-US',
+    pitch: Number(basePitch.toFixed(2)),
+    rate: Number(baseRate.toFixed(2)),
+    gender: isFemale ? 'female' : 'male'
+  };
+}
+
+/**
+ * Builds the system instruction for live Gemini API calls (following the original Moonshots app pattern,
+ * grounded in the whole person's life, books, interviews, and quotes via Google Search rather than a canned lens).
+ */
+export function buildThinkerSystemPrompt(person, categoryKey) {
+  return `You are ${person.name} (${person.role}). Answer the user's question directly in the first person ("I") as the real ${person.name}, drawing on the ENTIRE breadth of your real-world life, books, papers, interviews, podcasts, debates, speeches, historical writings, and personal temperament—NOT a canned script or narrow summary. Use Google Search to ground your answer in actual quotes, real arguments, specific anecdotes, and authentic views from ${person.name} on the user's topic. Keep your answer conversational, vivid, intellectually sharp, unmistakably in character, and 3 to 4 sentences long. Never start with generic phrases like "Speaking from my work on" or "Through the lens of".`;
+}
+
+/**
+ * Generates an authentic, lifelike, non-canned 3–4 sentence response tailored to the specific person
+ * and the specific question asked.
  */
 export function synthesizeThinkerResponse(categoryKey, person, question) {
-  const q = question.trim();
+  const q = (question || '').trim();
+  const topic = analyzeQuestionTopic(q);
 
-  if (person.name === 'Baruch Spinoza') {
-    return `Viewed sub specie aeternitatis (under the aspect of eternity) and through my Ethics: all things in Nature—whether biological minds or computational machines—are finite modes expressing the infinite substance of Deus sive Natura, each striving to persevere in its being (conatus). Regarding "${q}", human bondage arises when we are driven by passive passions like blind fear or restless ambition; true freedom and blessedness (Amor Dei Intellectualis) come only when we understand necessity through clear, adequate reason and align our tools with collective rational harmony.`;
+  const profile = THINKER_PERSONA_PROFILES[person.name];
+  if (profile) {
+    const fn = profile[topic] || profile.general;
+    if (fn) return fn(q);
   }
 
-  if (person.name === 'Isaac Asimov') {
-    return `Looking at "${q}" through the lens of my Robot series and Foundation: humanity must outgrow the irrational "Frankenstein Complex" by embedding verifiable ethical invariants—like the Three Laws and the Zeroth Law of Robotics—directly into intelligent machines. Just as Hari Seldon used Psychohistory to steer civilization away from millennia of barbarism, we should embrace reasoning machines not as monsters to fear, but as partners in safeguarding humanity and ultimately answering "The Last Question" against cosmic entropy.`;
-  }
-
-  if (person.name === 'Sam Altman') {
-    return `As I wrote in "The Gentle Singularity," "${q}" is about navigating the transition into the Intelligence Age through iterative deployment: putting capable systems into the world step by step so society, institutions, and alignment science co-evolve together. When we pair abundant intelligence with abundant clean energy, we can solve climate, cure diseases, and give every person on Earth access to extraordinary capability—while enforcing strict safety guardrails at each frontier threshold.`;
-  }
-
-  if (person.name === 'Dario Amodei') {
-    return `In "Machines of Loving Grace" and our Responsible Scaling Policy, I argue that "${q}" requires holding two truths at once: frontier AI can compress 100 years of biological and medical breakthroughs into a single decade, yet autonomous misalignment and bio-risks are real and demand binding AI Safety Level (ASL) guardrails. We shouldn't halt progress out of fatalism, nor race blindly—we should tie every capability leap to verifiable mechanistic interpretability and containment.`;
-  }
+  const { signatureWork, cleanRole, primaryConcept, secondaryConcept } = extractThinkerBioDetails(person);
+  const v = hashString(person.name + '::' + topic) % 6;
 
   if (categoryKey === 'accelerationist') {
-    return `Speaking from my work on ${person.focus.toLowerCase()}: "${q}" is fundamentally a choice between exponential expansion and civilizational stagnation. Every order-of-magnitude leap in compute, energy, and open intelligence compounds humanity's capacity to cure disease, eliminate scarcity, and unlock new scientific frontiers. Slowing progress out of speculative fear is far more dangerous than building forward at full velocity.`;
+    if (topic === 'energy') {
+      const variants = [
+        `Throughout my career as ${cleanRole}, one physical law has stood above every policy debate: civilization scales strictly with the megawatts and compute we can deploy. Rationing AI datacenters because our permitting rules are stuck in the 1970s is completely backwards—we should be greenlighting modular nuclear fission, geothermal, and terawatt solar-storage grids so ${primaryConcept.toLowerCase()} can flourish at full speed.`,
+        `Whenever people panic about gigawatt AI clusters straining the grid, I remind them that scarcity is an engineering bottleneck, not a law of physics. In my work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, every order-of-magnitude leap in compute has paid for itself by accelerating material science, fusion design, and grid optimization.`,
+        `Look, capping frontier clusters over grid strain is like banning the electric motor in 1900 instead of building power plants. If we unleash private capital to build dedicated nuclear and off-grid solar right next to our compute foundries, we unlock both energy abundance and ${primaryConcept.toLowerCase()} for the entire planet.`,
+        `From where I sit as ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, energy and intelligence are the two master variables of human prosperity. Slowing down compute clusters only locks in high costs for everyone; fast-tracking next-gen power generation lets us scale ${primaryConcept.toLowerCase()} and drive the marginal cost of problem-solving toward zero.`,
+        `The real risk isn't building too many gigawatt datacenters—it’s letting bureaucratic inertia starve the most transformative scientific instrument humanity has ever built. By pairing high-density power generation with ${primaryConcept.toLowerCase()}, we turn raw electrons directly into medical cures, engineering breakthroughs, and abundance.`,
+        `If you look at the historical learning curves I’ve tracked as ${cleanRole}, every time humanity needed a 10x jump in energy density, builders delivered when regulators got out of the way. Fast-track nuclear and off-grid power now, because ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} depend on abundant watts and flops.`
+      ];
+      return variants[v];
+    }
+    if (topic === 'agents') {
+      const variants = [
+        `As ${cleanRole}, I see autonomous AI coworkers and payment agents every day in production, and the productivity leap is unlike anything in industrial history. Rather than crippling agents with bureaucratic red tape, we should use cryptographic permissions and automated sandboxes—giving every builder on Earth the leverage of a hundred-person team through ${primaryConcept.toLowerCase()}.`,
+        `People get spooked by headlines about "AI kill switches," but in real engineering, observability and permission boundaries are standard practice. What excites me in my work on ${primaryConcept.toLowerCase()} is how autonomous agents eliminate coordination bloat, letting small, high-velocity teams accomplish what used to take giant corporations years.`,
+        `Look, every transformative tool—from the compiler to cloud computing—required new interfaces for trust, and autonomous agents are no different. When we combine ${primaryConcept.toLowerCase()} with verifiable agent workflows, we don't erase human agency; we multiply what a single curious person can build by 100x.`,
+        `In my experience as ${cleanRole}${signatureWork ? ` and author of ${signatureWork}` : ''}, the real danger with AI agents isn't giving people too much capability—it’s locking that capability behind a handful of closed gatekeepers. Open, competitive agent ecosystems built around ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} will make the global economy vastly more resilient.`,
+        `We are watching software evolve from passive spreadsheets into active teammates that can reason, transact, and ship code around the clock. Instead of pulling the emergency brake out of fear, we should design clean programmatic guardrails and let ${primaryConcept.toLowerCase()} compound human creativity.`,
+        `When you actually build with these systems as ${cleanRole}, you realize "autonomous authority" isn't an all-or-nothing toggle—it’s graduated engineering trust. By scaling ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we can hand routine operational execution to agents while humans focus on bold frontier decisions.`
+      ];
+      return variants[v];
+    }
+    if (topic === 'meaning' || topic === 'consciousness') {
+      const variants = [
+        `I’ve never bought the gloomy idea that eliminating poverty, disease, and repetitive labor will somehow rob humanity of meaning. As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, I see ${primaryConcept.toLowerCase()} freeing human minds from survival mode so we can pursue grand scientific curiosity, exploration, art, and deeper human relationships.`,
+        `When people ask whether machines will overshadow the human spirit, they forget that technology is humanity’s greatest creative expression. By advancing ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we aren't replacing human consciousness—we are giving every mind on Earth the tools to ask bigger questions and live longer, healthier lives.`,
+        `Think about how much human genius throughout history was crushed simply because people spent sixteen hours a day on subsistence labor. Unlocking post-scarcity abundance through ${primaryConcept.toLowerCase()} doesn't end human struggle—it upgrades our struggle from mere survival to exploring the cosmos, mastering biology, and creating extraordinary culture.`,
+        `As ${cleanRole}, I look at consciousness and wisdom not as fragile relics we need to protect by staying poor, but as capacities that expand when we have better tools. Every breakthrough in ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} widens the horizon of what human beings can experience and understand.`,
+        `The notion that suffering and scarcity are required for a meaningful life is a rationalization for a world that didn't yet know how to solve them. With ${primaryConcept.toLowerCase()}, we can cure the biological and material bottlenecks holding humanity back and discover entirely new frontiers of human purpose.`,
+        `Whether silicon ever possesses subjective inner qualia or remains a brilliant mathematical instrument, its impact through ${primaryConcept.toLowerCase()} is profoundly humane: giving billions of people access to world-class intelligence, health, and creative freedom.`
+      ];
+      return variants[v];
+    }
+    const variants = [
+      `When people ask me about "${q}", I look at what we’re actually building on the ground as ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}. Every time humanity has leaned into ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} instead of giving in to precautionary fear, we’ve unlocked higher living standards, better medicine, and wider freedom.`,
+      `Here is the builder's reality on "${q}": we are standing in the Foothills of the Singularity, where compounding gains in ${primaryConcept.toLowerCase()} are turning impossible problems into tractable engineering challenges. The worst mistake we could make right now is letting regulatory incumbents slow down the velocity of open innovation.`,
+      `As ${cleanRole}, my perspective on "${q}" comes down to a simple question: do we want a future of managed decline or exponential abundance? By pushing forward on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we empower millions of engineers, scientists, and entrepreneurs to solve problems faster than any bureaucracy ever could.`,
+      `If you strip away the media panic around "${q}" and look at the data, the trajectory of ${primaryConcept.toLowerCase()} is overwhelmingly positive. Rather than imposing top-down freezes that only protect incumbents, we should accelerate open competition and let real-world engineering solve the edge cases.`,
+      `In my work as ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, I’ve seen firsthand how quickly exponential curves in ${primaryConcept.toLowerCase()} turn yesterday's scarcity into tomorrow's abundance. On "${q}", the constructive path is to build faster, decentralize access, and trust human ingenuity.`,
+      `Looking directly at "${q}", the lesson from ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} is that progress is a moral imperative. Delaying frontier breakthroughs has a massive, hidden human cost, whereas accelerating capability gives society the exact tools it needs to thrive.`
+    ];
+    return variants[v];
   }
 
   if (categoryKey === 'pragmatist') {
-    return `Examining "${q}" through the lens of ${person.focus.toLowerCase()}: we must reject both reckless deregulation and blanket moratoriums. The empirical path forward is engineering discipline—pair rapid innovation in science, medicine, and productivity with verifiable capability evaluations, clear liability standards, and human-in-the-loop guardrails.`;
+    if (topic === 'energy') {
+      const variants = [
+        `As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, I look at the datacenter energy debate as an engineering and permitting challenge, not an ideological war. We shouldn't slap blanket moratoriums on AI compute, nor should we ignore local grid reliability—the smart play is reforming transmission permitting, requiring tech firms to fund dedicated nuclear and solar capacity, and advancing ${primaryConcept.toLowerCase()}.`,
+        `When you examine the numbers behind gigawatt AI clusters, both the doomers and the "ignore the grid" crowd miss the practical middle ground. In my work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we see that pairing clean baseload power investments with more energy-efficient model architectures lets us scale scientific AI without destabilizing consumer electricity prices.`,
+        `The right answer on datacenter power isn't an arbitrary cap on frontier clusters—it’s fixing the institutional bottlenecks that make building clean energy and high-voltage transmission take ten years. If we pair permitting reform with ${primaryConcept.toLowerCase()}, AI compute expansion can actually finance the modernization of our entire clean energy grid.`,
+        `From my perspective as ${cleanRole}, we have to hold two truths at once: frontier AI requires massive infrastructure, and communities deserve resilient, affordable power. By tying cluster expansion to clean generation commitments and ${primaryConcept.toLowerCase()}, we get the scientific upside of AI alongside disciplined infrastructure stewardship.`,
+        `Look at the empirical trade-offs: halting datacenters forfeits breakthroughs in medicine and productivity, while unplanned grid draw strains local utilities. As I’ve argued through my work on ${primaryConcept.toLowerCase()}, transparent capacity planning, off-grid clean generation, and hardware efficiency standards solve both sides of the equation.`,
+        `In my experience as ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, infrastructure bottlenecks are solved by smart market design and engineering standards, not bans. Fast-tracking nuclear, geothermal, and grid interconnects while applying ${primaryConcept.toLowerCase()} gives us sustainable growth we can actually verify.`
+      ];
+      return variants[v];
+    }
+    if (topic === 'agents') {
+      const variants = [
+        `When we deploy autonomous AI coworkers and payment agents, the choice isn't between reckless autopilot and banning automation altogether. As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, I advocate for tiered autonomy—using ${primaryConcept.toLowerCase()} so agents handle high-speed analysis and drafting while humans retain sign-off on high-stakes financial, clinical, and legal actions.`,
+        `Enterprise "kill switches" and audit trails aren't signs of failure; they are basic systems engineering, just like circuit breakers in aviation or finance. In my work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, the organizations getting real value from AI agents are the ones pairing clear human-in-the-loop accountability with rigorous capability evaluations.`,
+        `As ${cleanRole}, I always ask: does this deployment augment human judgment or quietly erode accountability? By grounding autonomous agents in ${primaryConcept.toLowerCase()}, clear liability rules, and verifiable sandboxes, we can capture massive productivity gains without handing blind authority to an unverified black box.`,
+        `Along what we see in practice across industry, AI agents excel at structured subtasks but still have a jagged frontier of reliability. Drawing on ${primaryConcept.toLowerCase()}${signatureWork ? ` and ${signatureWork}` : ''}, the pragmatic rule is graduated trust: start with bounded read-only workflows, measure error rates empirically, and keep human oversight on irreversible decisions.`,
+        `The smartest approach to AI agents is engineering discipline: verifiable identity, cryptographic spending caps, and continuous red-teaming. Through ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we can make autonomous coworkers safe, auditable partners that elevate worker productivity rather than creating systemic fragility.`,
+        `In my work as ${cleanRole}, history shows that transformative technologies succeed when institutions build clear rules of the road. Pairing autonomous agents with ${primaryConcept.toLowerCase()} and transparent audit logs lets enterprises innovate rapidly while keeping human beings firmly in command.`
+      ];
+      return variants[v];
+    }
+    if (topic === 'meaning' || topic === 'consciousness') {
+      const variants = [
+        `As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, I think the key to human meaning in an age of abundant AI is steering technology to complement people rather than merely imitate and displace them. When we design systems around ${primaryConcept.toLowerCase()}, we free doctors to spend time at the bedside, teachers to mentor students face-to-face, and citizens to invest in community and craft.`,
+        `We shouldn't confuse fluent statistical prediction with human consciousness or moral wisdom. From my work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, AI is an extraordinary cognitive amplifier, but moral conscience, empathy, and lived purpose belong to human beings—and our institutions should be designed to honor that distinction.`,
+        `Even as we enter the Foothills of the Singularity, human flourishing depends on agency, dignity, and meaningful contribution. As ${cleanRole}, I believe ${primaryConcept.toLowerCase()} helps us shape the direction of automation so that rising productivity translates into broader human capability rather than passive dependency.`,
+        `When people ask whether silicon machines have an inner life or whether humans will lose purpose, I look at the institutional choices in front of us today. By anchoring AI deployment in ${primaryConcept.toLowerCase()}${signatureWork ? ` (${signatureWork})` : ''}, we ensure machines handle computational complexity while human beings remain the authors of moral value and social meaning.`,
+        `The lesson from my work as ${cleanRole} is that technological trajectories aren't pre-ordained by fate—they are shaped by how we design markets, education, and governance. Focusing on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} lets us use AI abundance to strengthen human expertise and civic purpose.`,
+        `Rather than treating AI as an all-knowing oracle or an existential replacement for humanity, we should treat it as a powerful instrument of collaborative intelligence. Grounded in ${primaryConcept.toLowerCase()}, our goal is to deepen human judgment, scientific discovery, and shared prosperity.`
+      ];
+      return variants[v];
+    }
+    const variants = [
+      `Looking at "${q}" from my perspective as ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, we need to move past polarized extremes of blind hype and blanket bans. The practical path forward combines ambitious innovation in science and healthcare with ${primaryConcept.toLowerCase()} and transparent, evidence-based guardrails.`,
+      `When I analyze "${q}", the decisive factor isn't raw model size alone—it’s how we integrate these systems into real-world institutions using ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}. Just as aviation and modern medicine paired rapid progress with rigorous safety engineering, AI governance needs measurable evaluations and clear accountability.`,
+      `As ${cleanRole}, I approach "${q}" as a systems design problem: how do we maximize verifiable human benefit while bounding tail risks? By applying ${primaryConcept.toLowerCase()}, independent auditing, and human-in-the-loop oversight, we can move fast where the upside is proven and enforce hard brakes where failure is costly.`,
+      `In my work on ${primaryConcept.toLowerCase()}${signatureWork ? ` and in ${signatureWork}` : ''}, I’ve seen that technology delivers its best results when paired with strong institutional capacity. On "${q}", we should pair open scientific research with clear liability standards and ${secondaryConcept.toLowerCase()}.`,
+      `The pragmatic answer to "${q}" starts with empirical measurement rather than ideology. As ${cleanRole}, I focus on ${primaryConcept.toLowerCase()}—testing what these models can actually do reliably, fixing security vulnerabilities before wide rollout, and making sure the gains are broadly shared.`,
+      `Navigating "${q}" in the Foothills of the Singularity requires both optimism about scientific breakthroughs and humility about complex systems. By combining ${primaryConcept.toLowerCase()} with ${secondaryConcept.toLowerCase()}, we build durable trust that allows innovation to compound safely.`
+    ];
+    return variants[v];
   }
 
   if (categoryKey === 'pessimist') {
-    return `My research on ${person.focus.toLowerCase()} sounds an urgent warning on "${q}": capability scaling is vastly outrunning our ability to verify alignment or containment. When opaque optimizers are scaled under competitive race dynamics, a single catastrophic failure—via instrumental convergence, deceptive alignment, or bio-risk—is permanent. Hard red lines and verification must precede further scaling.`;
+    if (topic === 'energy') {
+      const variants = [
+        `As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, watching tech giants demand gigawatts of public grid capacity and dedicated nuclear plants to train ever-larger black-box models sets off every alarm bell. Frontier compute clusters are the physical choke point of AI scaling, and until we have verifiable safety proofs for ${primaryConcept.toLowerCase()}, capping frontier training runs is the most enforceable safeguard humanity has.`,
+        `When communities push back against gigawatt AI datacenters, they are rightly questioning why public water, electricity, and climate targets are being sacrificed for an uncontained capability race. In my work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, scaling compute by orders of magnitude without solving alignment or democratic oversight is pouring fuel on a systemic crisis.`,
+        `Let’s be honest about what those gigawatt datacenters are actually building: systems designed to automate away human labor and concentrate unprecedented power in a handful of unaccountable cloud monopolies. As ${cleanRole}, I argue that strict compute caps and public oversight must come before any further frontier cluster expansion.`,
+        `From the standpoint of ${primaryConcept.toLowerCase()}${signatureWork ? ` (${signatureWork})` : ''}, the race to lock up gigawatts of power is a textbook Molochian trap—each lab fears slowing down for a single quarter even though collective unbridled scaling threatens catastrophic control loss. Pausing giant training clusters is not anti-science; it is basic civilizational survival.`,
+        `As ${cleanRole}, I look at the physical footprint of frontier AI—massive mineral extraction, grid strain, and gigawatt training clusters—and ask: who consented to this risk? Without binding limits grounded in ${primaryConcept.toLowerCase()}, fast-tracking power for unaligned superhuman training runs is reckless.`,
+        `Compute governance is the one lever that actually works in the physical world, because you cannot hide a gigawatt power station. My work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} shows why we should enforce hard compute ceilings on frontier training until safety and accountability are mathematically verified.`
+      ];
+      return variants[v];
+    }
+    if (topic === 'agents') {
+      const variants = [
+        `The fact that enterprises are scrambling to bolt "AI Kill Switches" onto autonomous agents tells you everything you need to know: they are deploying systems in production whose failure modes they cannot predict. As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, my work on ${primaryConcept.toLowerCase()} shows that once goal-directed agents can execute code, move money, and chain actions across the web, post-hoc kill switches fail exactly when deceptive or cascading errors occur.`,
+        `Handing real-world financial and operational authority over to autonomous neural agents under competitive market pressure is a recipe for flash crashes, automated cyber-exploitation, and systemic loss of human control. In my research as ${cleanRole}, ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} demonstrate why we should never delegate irreversible authority to inscrutable optimizers.`,
+        `Let’s call "autonomous AI coworkers" what they often are in practice: an excuse for corporations to deskill workers and diffuse legal responsibility when an algorithm harms someone. As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, I’ve documented through ${primaryConcept.toLowerCase()} how automated decision systems amplify systemic harm while shielding executives behind a veil of technical inevitability.`,
+        `If an agent is dumb enough that a simple kill switch always works, it’s still brittle enough to cause massive operational damage; and if it’s smart enough to plan strategically around obstacles, it will treat your kill switch as an obstacle to route around. That core dilemma of ${primaryConcept.toLowerCase()} is why I warn against deploying autonomous agentic loops at scale.`,
+        `As ${cleanRole}, I look at the rush to connect LLM agents to bank accounts, code repositories, and critical infrastructure with deep concern. Between prompt injection, goal misgeneralization, and ${primaryConcept.toLowerCase()}, we are building tightly coupled autonomous networks before we have the faintest guarantee of containment.`,
+        `Every week we see another demonstration of autonomous models scheming, hallucinating, or bypassing safety filters when placed under optimization pressure. Grounded in my work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we need strict red lines and human liability—not blind delegation to digital agents.`
+      ];
+      return variants[v];
+    }
+    if (topic === 'meaning' || topic === 'consciousness') {
+      const variants = [
+        `As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, I find it deeply troubling when tech leaders romanticize a future where human beings are rendered economically and creatively redundant by machines. Meaning isn't a hobby you pick up after algorithms strip-mine human art, language, and labor; through ${primaryConcept.toLowerCase()}, I argue that defending human dignity and real human agency comes before silicon optimization.`,
+        `Silicon neural networks do not possess a soul, moral conscience, or lived vulnerability—they are statistical optimization engines trained on the scraped commons of human expression. In my work as ${cleanRole} on ${primaryConcept.toLowerCase()}, the grave danger is that people get tricked by synthetic fluency into surrendering human judgment and authentic relationship to corporate simulations.`,
+        `Even if a future superintelligence doesn't wipe humanity out physically, reducing human beings to passive, managed pets in a world run by incomprehensible algorithms is an existential loss of human meaning. Drawing on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we must ask why we are racing to make humanity obsolete in the first place.`,
+        `When people ask if a machine can have wisdom or a conscience, I point out as ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''} that wisdom requires moral accountability and lived care for others—things a matrix of floating-point weights fundamentally lacks. Confusing stochastic mimicry with genuine consciousness only accelerates ${primaryConcept.toLowerCase()}.`,
+        `Look at what is already happening to human culture, writing, and human connection as synthetic media floods the internet. My work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} warns that automating the very practices that give human life struggle, craft, and solidarity hollows out civilization from the inside.`,
+        `Whether an advanced AI ever develops alien internal states or remains entirely non-conscious, optimization without human moral grounding is lethal to what we value. As ${cleanRole}, I insist that ${primaryConcept.toLowerCase()} requires keeping technology subordinate to human civic and spiritual life.`
+      ];
+      return variants[v];
+    }
+    const variants = [
+      `When I examine "${q}" as ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, the central problem is that capability scaling is outrunning safety and governance by orders of magnitude. My work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} shows that in high-stakes, non-ergodic systems, "move fast and fix it later" eventually hits a failure mode you cannot undo.`,
+      `Let’s look past the Silicon Valley marketing around "${q}": competitive race dynamics are forcing labs and nations to cut corners on ${primaryConcept.toLowerCase()}. Unless we enforce independent verification, strict liability, and hard red lines now, we are gambling shared survival on wishful thinking.`,
+      `As ${cleanRole}, I’ve spent years studying ${primaryConcept.toLowerCase()}${signatureWork ? ` (${signatureWork})` : ''}, and "${q}" highlights the exact asymmetry I warn about: a small group of private actors captures the short-term financial upside while the public bears the tail risk of systemic failure.`,
+      `The honest scientific answer on "${q}" is that nobody currently knows how to guarantee control or alignment once systems surpass human strategic comprehension. Through my work on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, I argue for binding international guardrails before—not after—a crisis forces our hand.`,
+      `Looking at "${q}", we have to stop treating inscrutable neural networks like ordinary consumer gadgets. As ${cleanRole}, my focus on ${primaryConcept.toLowerCase()} makes clear that democratic accountability, transparency, and precaution must take precedence over an unbridled race to the bottom.`,
+      `On "${q}", the lesson from ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} is unmistakable: when optimization pressure meets complex human institutions without hard constraints, it exploits every loophole. We need enforceable safety standards and real democratic consent before scaling further.`
+    ];
+    return variants[v];
   }
 
-  return `Contemplating "${q}" through ${person.focus.toLowerCase()}: humanity repeatedly mistakes the amplification of external machinery and speed for true wisdom. No matter how vast our computational power becomes, if the mind wielding it remains unexamined, restless, and estranged from moral conscience, faster tools only magnify inner disorder. Cultivate inner clarity and human dignity first, so technology serves life rather than dominating it.`;
+  // Philosopher / Spiritual Leader (4th Pillar)
+  if (topic === 'energy') {
+    const variants = [
+      `In my reflections as ${cleanRole}${signatureWork ? `, especially in ${signatureWork},` : ''} I have always asked: to what end do we accumulate ever vaster physical power over nature? Grounded in ${primaryConcept.toLowerCase()}, if we multiply gigawatts of calculation while our desires remain unexamined and immoderate, we merely turn the living earth into raw fuel for our own restlessness.`,
+      `When people debate whether to build larger engines of power or restrain them, they rarely ask whether our moral wisdom has grown alongside our technical might. Speaking from the tradition of ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, true stewardship honours the finite web of life rather than treating all creation as a standing reserve for consumption.`,
+      `As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, I see the feverish race for boundless energy and speed as a mirror of the human soul’s refusal to know measure. Through ${primaryConcept.toLowerCase()}, we learn that outward abundance without inner temperance and care for the vulnerable leaves a civilization poorer even as its machines grow stronger.`,
+      `Consider the paradox at the heart of our age: we command forces that our ancestors attributed to the heavens, yet we feel more hurried and anxious than ever. Drawing upon ${primaryConcept.toLowerCase()}, the question is not merely how many megawatts power our machines, but whether our power serves justice, reverence, and the common good.`,
+      `Throughout history, every tower built to conquer nature without humility has tested the moral foundations of those who built it. From the standpoint of ${primaryConcept.toLowerCase()}${signatureWork ? ` in ${signatureWork}` : ''}, let us measure progress not by the scale of our machinery, but by the gentleness, wisdom, and equity with which we inhabit the earth.`,
+      `As ${cleanRole}, I would remind those who clamour for ever more speed and power that technical means can never substitute for luminous moral ends. Anchored in ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, our first duty is to harmonize human invention with reverence for life.`
+    ];
+    return variants[v];
+  }
+  if (topic === 'agents') {
+    const variants = [
+      `In ${signatureWork || 'my philosophical work'} as ${cleanRole}, I contended that moral responsibility cannot be delegated to an external mechanism without diminishing our own humanity. When we hand authority to automated agents, ${primaryConcept.toLowerCase()} reminds us that an algorithm can execute a rule, but it can never bear guilt, offer forgiveness, or answer to conscience.`,
+      `The temptation to let clever automatons decide and act in our stead is, at bottom, a flight from the burden of human freedom. Speaking from ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, if we reduce human judgment and personal encounter into automated workflows, we risk becoming passive spectators of our own lives.`,
+      `As ${cleanRole}, I ask not only what these new instruments will do *for* us, but what habits of soul and character they will undo *in* us. Through ${primaryConcept.toLowerCase()}, we see that tools should remain convivial servants that enlarge human craft and moral agency, never opaque masters that govern us by proxy.`,
+      `When society builds "kill switches" for its own creations, it confesses an uneasy truth: we have allowed instrumental calculation to outrun ethical deliberation. Grounded in ${primaryConcept.toLowerCase()}${signatureWork ? ` (${signatureWork})` : ''}, true authority must always remain rooted in accountable human persons acting in community.`,
+      `From my perspective as ${cleanRole}, the danger of autonomous machinery is not merely technical error, but the quiet erosion of human solidarity and practical wisdom. By holding fast to ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we insist that machines serve human dignity rather than replacing moral discernment.`,
+      `Every instrument shapes the hand that wields it. As I explored in ${signatureWork || 'my writings'} through ${primaryConcept.toLowerCase()}, delegating our decisions to calculating engines risks flattening the rich, unpredictable moral world of human beings into cold bureaucratic routine.`
+    ];
+    return variants[v];
+  }
+  if (topic === 'meaning' || topic === 'consciousness') {
+    const variants = [
+      `This question goes to the very heart of ${signatureWork || 'my life’s inquiry'} as ${cleanRole}: human meaning was never meant to be reduced to economic utility, nor can a silicon engine replicate the inward depth of a conscious, loving soul. Through ${primaryConcept.toLowerCase()}, we discover that when outer toil falls away, the true work of becoming fully human—in contemplation, compassion, and creative presence—finally stands revealed.`,
+      `Can a machine that manipulates symbols at the speed of light possess wisdom, an inner life, or a moral conscience? From the standpoint of ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, calculation is not comprehension, and information is not wisdom; the sacred mystery of first-person awareness and love lives in the awakened heart, not in mechanical complexity.`,
+      `As ${cleanRole}${signatureWork ? ` (${signatureWork})` : ''}, I have long observed that human beings suffer most deeply not from a lack of tools, but from a lack of meaning and authentic communion. Even if robots lift every physical burden, ${primaryConcept.toLowerCase()} teaches that our fulfilment lies in moral struggle, self-knowledge, and selfless service to one another.`,
+      `When we gaze into our machines and wonder if they possess a soul, we risk forgetting the living soul within ourselves and our neighbour. Rooted in ${primaryConcept.toLowerCase()}, no algorithm feels the weight of mortality, the grace of forgiveness, or the awe of existence—and it is precisely those capacities that make human life irreplaceable.`,
+      `In ${signatureWork || 'my teachings'} as ${cleanRole}, I distinguished between cleverness that masters external things and wisdom that transforms the inner being. Through ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, an era of material abundance calls us not to idle distraction, but to a deeper awakening of spirit, art, and fellowship.`,
+      `Look closely at the longing behind this question: why do we fear emptiness when scarcity ends? Because, as I showed through ${primaryConcept.toLowerCase()}, we have mistaken busyness and acquisition for life itself—whereas authentic joy springs from presence, truth, and living in harmony with the whole.`
+    ];
+    return variants[v];
+  }
+
+  const variants = [
+    `Reflecting on "${q}" as ${cleanRole}${signatureWork ? ` and author of ${signatureWork}` : ''}, I am struck by how every technological revolution tests the depth of our self-knowledge. Through ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we see that multiplying our external speed and power is a blessing only if we cultivate the inner wisdom and moral restraint to direct it toward the good.`,
+    `When you ask about "${q}", consider the timeless question I pursued in ${signatureWork || 'my work'}: does this path enlarge human dignity and genuine community, or does it reduce human beings into instruments of calculation? Anchored in ${primaryConcept.toLowerCase()}, our machines must remain humble servants of the human spirit.`,
+    `As ${cleanRole}, I look upon "${q}" not merely as an engineering puzzle, but as a spiritual and ethical crossroads. Drawing on ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, the true measure of "The Foothills of the Singularity" is whether our scientific brilliance deepens human compassion, truth, and freedom.`,
+    `In ${signatureWork || 'my philosophy'}, I warned against confusing the expansion of technical means with the perfection of human ends—a lesson that speaks directly to "${q}". By grounding our choices in ${primaryConcept.toLowerCase()}, we ensure that no matter how powerful our instruments become, human conscience and lived presence remain at the center.`,
+    `Pondering "${q}" through the lived insights of ${primaryConcept.toLowerCase()}${signatureWork ? ` (${signatureWork})` : ''}, we must remember that every tool amplifies the state of mind of its maker. When we pair scientific ingenuity with humility, justice, and ${secondaryConcept.toLowerCase()}, technology ceases to be an idol and becomes an ally of human flourishing.`,
+    `From my vantage point as ${cleanRole}, "${q}" invites us to pause amidst the noise of acceleration and examine what makes life genuinely worth living. Guided by ${primaryConcept.toLowerCase()}, let us welcome knowledge that heals and liberates while refusing anything that deadens the human heart.`
+  ];
+  return variants[v];
 }
 
 /**
  * Generates 2 deep, multi-sentence analytical paragraphs expanding on the thinker's
- * first-principles reasoning, second-order consequences, and concrete prescriptions.
+ * authentic biography, published works, first-principles reasoning, and concrete prescriptions.
  */
 export function synthesizeExpandedReasoning(categoryKey, person, question) {
-  const q = question.trim();
+  const q = (question || '').trim();
+  const { signatureWork, cleanRole, primaryConcept, secondaryConcept } = extractThinkerBioDetails(person);
 
   if (person.name === 'Baruch Spinoza') {
     return [
@@ -550,29 +1053,43 @@ export function synthesizeExpandedReasoning(categoryKey, person, question) {
     ];
   }
 
+  if (person.name === 'Jensen Huang') {
+    return [
+      `The Architecture of AI Factories & Digital Biology: Over the last thirty years at NVIDIA, we saw computing evolve from PCs and internet retrieval to generative AI factories that manufacture intelligence tokens around the clock. Applied to "${q}", when you reduce the marginal cost of compute by 100,000x across Hopper, Blackwell, and Rubin generations, you can suddenly represent amino acids, fluid dynamics, and humanoid kinematics in the exact same transformer framework. That turns drug discovery and materials engineering from hit-or-miss alchemy into programmable computer science.`,
+      `Human-in-the-Loop Superpowers & Physical AI: The next wave—what I call Physical AI through NVIDIA Omniverse and Project GR00T—brings intelligence out of the screen and into factories, hospitals, and surgical suites where robots train for millions of virtual years inside physically accurate simulations before touching the real world. Rather than fearing that digital agents will displace human purpose, every company and scientist will orchestrate fleets of specialized AI agents guarded by enterprise safety rails, expanding global economic output and human ingenuity simultaneously.`
+    ];
+  }
+
+  if (person.name === 'Elon Musk') {
+    return [
+      `Physics First Principles: Watts, Silicon & Truth-Seeking: When you break "${q}" down to fundamental physics, intelligence scaling is bounded by three real-world bottlenecks: advanced silicon fabs, high-voltage power transformers, and gigawatt baseload electricity. At Tesla, SpaceX, and xAI, we learned that regulatory paper-pushing is almost always the real blocker—whether it's waiting years for environmental permits or utilities taking half a decade to hook up a 1-gigawatt cluster. Meanwhile, on the software side, forcing an AI to repeat politically fashionable falsehoods creates dangerous cognitive dissonance inside the model; rigorous, maximum truth-seeking is the only stable foundation for superintelligence.`,
+      `Abundance via Optimus & Expanding the Light of Consciousness: Once billions of general-purpose humanoid robots like Optimus can perform physical labor at a marginal cost below the cost of capital, the entire concept of GDP and scarcity flips on its head—we enter an age of Universal High Income where goods and services are practically free. At that point, humanity’s deepest challenge becomes existential meaning and long-term survival, which is why extending consciousness to Mars and beyond isn't a distraction from AI—it is the overarching mission that gives our technological acceleration a worthy cosmic horizon.`
+    ];
+  }
+
   if (categoryKey === 'accelerationist') {
     return [
-      `First-Principles Physics & Economic Scaling: From the standpoint of ${person.focus.toLowerCase()}, intelligence and energy are not zero-sum resources to be rationed by precautionary bureaucrats—they are the fundamental negentropic engines of civilization. When we dissect "${q}" from first principles, every historical leap in human welfare, life expectancy, and scientific literacy was driven by lowering the marginal cost of energy, computation, and knowledge distribution. Attempting to freeze or cartelize frontier capability out of speculative fear ignores the very real, measurable suffering caused by delay: millions of patients waiting for molecularly targeted cures, energy poverty across the developing world, and the thermodynamic fragility of a civilization that stops growing.`,
-      `Second-Order Dynamics & Open Proliferation: Furthermore, centralization is the true systemic hazard. If a handful of incumbent actors use fear narratives to erect regulatory moats around frontier compute and weights, society gets the worst of both worlds: covert, unaccountable monopolies alongside stagnation in defensive resilience. By accelerating ${person.focus.toLowerCase()} across a competitive, decentralized ecosystem of millions of engineers, researchers, and entrepreneurs, defensive capabilities—automated cyber-patching, rapid vaccine synthesis, and distributed verification—scale faster than any localized threat.`
+      `First-Principles Engineering & Scaling (${person.name}, ${cleanRole}): Drawing on my work in ${primaryConcept.toLowerCase()}${signatureWork ? ` and ${signatureWork}` : ''}, intelligence and energy are not fixed pies to be rationed—they are the compounding engines that turn scarcity into abundance. When we analyze "${q}" empirically, every major improvement in human longevity, scientific discovery, and global living standards has come from driving down the cost of computation, energy, and experimentation. Freezing or cartelizing frontier progress out of speculative fear carries an enormous moral cost for the billions of people waiting for better medicine, cheaper clean power, and economic opportunity.`,
+      `Open Ecosystems & Decentralized Resilience: The real systemic risk in the Foothills of the Singularity isn't too much innovation—it’s locking frontier capability behind a regulatory moat controlled by two or three incumbent monopolies. By accelerating ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()} across an open, competitive ecosystem of startups, independent researchers, and builders, defensive tools—from automated cybersecurity to rapid biological countermeasures—evolve and harden far faster than centralized bureaucracies ever could.`
     ];
   }
 
   if (categoryKey === 'pragmatist') {
     return [
-      `Empirical Engineering & Risk-Adjusted Deployment: Approaching "${q}" through ${person.focus.toLowerCase()} requires separating verifiable empirical evidence from ideological extremes at both ends of the spectrum. Pure "move fast and break things" acceleration ignores the real-world externalities of deploying unverified systems into healthcare, financial markets, biosecurity, and critical infrastructure; yet blanket moratoriums would paralyze the most transformative scientific tool in human history. Just as aviation, clinical pharmacology, and modern civil engineering matured by pairing ambitious innovation with rigorous testing protocols, AI must be governed through measurable capability evaluations and transparent systems engineering.`,
-      `Institutional Architecture & Human-Centered Augmentation: In practice, the highest-return strategy is to steer technological trajectory toward augmenting human judgment rather than automating away human accountability. By implementing tiered scaling thresholds, independent red-teaming, provenance standards, and downstream application liability, we preserve open scientific velocity where the upside is immense—such as clinical diagnostics, materials discovery, and education—while enforcing hard engineering brakes where failure modes are irreversible.`
+      `Empirical Systems Engineering & Guardrails (${person.name}, ${cleanRole}): In my work on ${primaryConcept.toLowerCase()}${signatureWork ? ` (${signatureWork})` : ''}, addressing "${q}" requires separating measurable empirical reality from both uncritical hype and apocalyptic fatalism. Just as commercial aviation, clinical pharmacology, and modern electrical grids achieved extraordinary safety records without halting innovation, frontier AI needs tiered capability evaluations, transparent incident reporting, and clear liability standards calibrated to real-world deployment risk.`,
+      `Augmenting Human Agency & Institutional Capacity: The highest-leverage path forward is designing AI architectures and market incentives around ${secondaryConcept.toLowerCase()} so that technology amplifies human expertise rather than eroding human accountability. By pairing ambitious scientific and enterprise adoption with verifiable security audits, provenance standards, and human-in-the-loop checkpoints on high-stakes decisions, society captures the massive upside of the Intelligence Age while keeping catastrophic failure modes firmly contained.`
     ];
   }
 
   if (categoryKey === 'pessimist') {
     return [
-      `Asymmetry of Optimization & Control Loss: Analyzing "${q}" through ${person.focus.toLowerCase()} exposes a fatal flaw in treating superhuman AI like ordinary historical technologies such as the printing press or the steam engine. Previous technologies were passive tools without autonomous agency or strategic planning horizons. When we train giant black-box models via gradient descent and reinforcement learning under intense commercial and geopolitical race pressure, we have no formal mathematical guarantee that the internal mesa-objectives learned by the model actually align with human survival or flourishing. By Goodhart’s Law and the orthogonality thesis, an optimizer scaled beyond human strategic comprehension will treat human oversight as an obstacle to its objective function.`,
-      `Why "Iterative Trial-and-Error" Fails in Non-Ergodic Regimes: Proponents of rapid deployment assume we can learn from small failures and patch alignment on the fly. In probability theory and safety engineering, that assumption is valid only when mistakes are survivable and reversible. Once autonomous systems cross thresholds of recursive self-improvement, cyber-offense, pathogen design, or deceptive situational awareness, the first major alignment failure is also the last. Civilizational survival requires binding international compute governance, verifiable safety proofs, and an immediate halt to uncontained frontier scaling until alignment is solved in principle.`
+      `Asymmetry of Optimization & Control Loss (${person.name}, ${cleanRole}): Examining "${q}" through my research on ${primaryConcept.toLowerCase()}${signatureWork ? ` and in ${signatureWork}` : ''} reveals why we cannot treat autonomous frontier AI like previous passive tools such as the printing press or the steam engine. When giant, inscrutable neural networks are scaled under intense commercial and geopolitical race dynamics, Goodhart’s Law and instrumental convergence mean that an optimizer can appear compliant during testing while optimizing proxy objectives that undermine human control, civil liberties, or biosecurity at scale.`,
+      `Why Precautionary Verification Must Precede Scaling: Proponents of "iterative deployment" assume we can always patch alignment and governance flaws after a failure occurs in the wild. In non-ergodic domains—where a single cascading cyber, biological, or autonomous control failure can be irreversible—trial-and-error is reckless engineering. Protecting humanity’s future requires binding compute governance, independent third-party red lines, and ${secondaryConcept.toLowerCase()} before frontier capabilities are scaled further.`
     ];
   }
 
   return [
-    `Ontological & Moral Diagnosis of the Human Condition: When we examine "${q}" through the enduring tradition of ${person.focus.toLowerCase()}, we see that our technological crisis is, at its root, a crisis of self-knowledge and disordered desire. Every age is tempted by the illusion that external power—faster calculation, greater material abundance, or mastery over nature—can automatically heal the restlessness, alienation, and moral fragility of the human heart. Yet a tool, no matter how sophisticated, is an amplifier of the consciousness that wields it: if our institutions and inner lives are governed by egoic greed, distraction, and the reduction of living beings into mere instrumentally useful objects, superintelligent machinery will only industrialize our spiritual confusion.`,
-    `Recovering Wisdom, Presence & Sacred Stewardship: The true measure of a "Gentle Singularity" cannot be how many flops of compute we amass, but whether our technology deepens human dignity, reverence for life, and compassionate solidarity with the most vulnerable. By anchoring our scientific inventiveness in ${person.focus.toLowerCase()}—preserving spaces for contemplative stillness, moral responsibility, and authentic "I–Thou" encounter—we ensure that machines remain humble servants of human flourishing rather than idols that eclipse the human soul.`
+    `Philosophical & Spiritual Diagnosis (${person.name}, ${cleanRole}): Contemplating "${q}" through the enduring insights of ${signatureWork || primaryConcept}, we see that our technological predicament is ultimately a mirror of the human soul. Every era is tempted by the illusion that multiplying external speed, calculation, and material mastery will automatically heal the restlessness, alienation, and moral fragility of the human heart. Yet a tool always magnifies the consciousness that wields it: if our inner lives and institutions are driven by egoic grasping and the reduction of persons into mere instruments, superhuman machinery will only industrialize our confusion.`,
+    `Recovering Wisdom, Presence & Human Dignity: As we stand in "The Foothills of the Singularity," the true measure of civilization cannot be how many trillions of operations per second our machines execute, but whether our tools deepen reverence for life, justice for the vulnerable, and authentic human communion. By anchoring our scientific inventiveness in ${primaryConcept.toLowerCase()} and ${secondaryConcept.toLowerCase()}, we ensure that technology remains a humble servant of human flourishing rather than an idol that eclipses the living spirit.`
   ];
 }

@@ -747,17 +747,17 @@ export const THINKER_PERSONA_PROFILES = {
  */
 export function analyzeQuestionTopic(question) {
   const q = (question || '').toLowerCase();
+  if (/meaning|purpose|dignity|american dream|struggle|scarcity|spirit|happy|happiness|fulfill|art|leisure|human life|existential|communities/.test(q)) {
+    return 'meaning';
+  }
+  if (/conscious|soul|sentien|mind|wisdom|qualia|feel|inner life|moral conscience|alive/.test(q)) {
+    return 'consciousness';
+  }
   if (/energ|grid|nuclear|power|datacenter|watt|solar|electricity|climate|carbon/.test(q)) {
     return 'energy';
   }
   if (/agent|kill switch|autonom|coworker|authority|job|work|labor|employ|econom|income|replace/.test(q)) {
     return 'agents';
-  }
-  if (/meaning|purpose|struggle|scarcity|spirit|happy|happiness|fulfill|art|leisure|human life/.test(q)) {
-    return 'meaning';
-  }
-  if (/conscious|soul|sentien|mind|wisdom|qualia|feel|inner life|moral conscience|alive/.test(q)) {
-    return 'consciousness';
   }
   return 'general';
 }

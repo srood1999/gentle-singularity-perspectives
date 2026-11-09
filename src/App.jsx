@@ -28,6 +28,10 @@ import {
   buildThinkerSystemPrompt
 } from './data/roster200';
 
+// Tiny silent WAV used to unlock audio playback during the user's click (Safari/iOS autoplay rules)
+const SILENT_WAV =
+  'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAIA+AAACABAAZGF0YQAAAAA=';
+
 export default function App() {
   // Selected IDs for each of the 4 Dropdowns (50 + 50 + 50 + 100 = 250 voices)
   const [selectedFour, setSelectedFour] = useState({
@@ -53,58 +57,87 @@ export default function App() {
 
   // Track active Text-to-Speech playback: key = catId or null
   const [speakingKey, setSpeakingKey] = useState(null);
+  // Which card is waiting for its Gemini neural voice audio to be generated
+  const [voiceLoadingKey, setVoiceLoadingKey] = useState(null);
   const isCancelledRef = useRef(false);
   const requestVersionRef = useRef(0);
+  const audioRef = useRef(null);
+  const ttsCacheRef = useRef(new Map());
+  const geminiTtsAvailableRef = useRef(true);
 
   // Stop speech on unmount
   useEffect(() => {
     return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
       if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
         window.speechSynthesis.cancel();
       }
     };
   }, []);
 
+  // Make sure the browser voice list is loaded (Chrome populates it asynchronously)
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+      window.speechSynthesis.onvoiceschanged = () => window.speechSynthesis.getVoices();
+    }
+  }, []);
+
   const stopSpeaking = () => {
     isCancelledRef.current = true;
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.onended = null;
+    }
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+    setVoiceLoadingKey(null);
     setSpeakingKey(null);
   };
 
+  // Fallback only: choose the most natural cloud/neural browser voice and never the
+  // legacy robotic offline voices (Microsoft David/Zira/Mark Desktop, Fred, eSpeak, etc.)
   const pickBestVoice = (settings) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) return null;
     const voices = window.speechSynthesis.getVoices() || [];
     if (!voices.length) return null;
 
-    const langPrefix = (settings.lang || 'en-US').toLowerCase();
+    const legacyRobotic = /desktop|espeak|\bfred\b|albert|bad news|bahh|bells|boing|bubbles|cellos|zarvox|trinoids|whisper|wobble|junior|ralph|kathy|princess|deranged|hysterical|organ|superstar/i;
+    const neuralHints = /natural|neural|online|google|premium|enhanced|siri/i;
+    const femaleHints = /female|samantha|victoria|karen|moira|tessa|fiona|veena|aria|jenny|sonia|libby|natasha|michelle|emma|ava|allison|susan|serena|google us english/i;
+    const maleHints = /\bmale\b|daniel|alex|oliver|arthur|thomas|guy|ryan|christopher|eric|roger|andrew|brian|william|evan|tom|aaron|google uk english male/i;
+
     const enVoices = voices.filter((v) => v.lang && v.lang.toLowerCase().startsWith('en'));
-    const pool = enVoices.length ? enVoices : voices;
+    const pool = (enVoices.length ? enVoices : voices).filter((v) => !legacyRobotic.test(v.name));
+    if (!pool.length) return null;
 
-    const femaleHints = /female|samantha|victoria|karen|moira|tessa|fiona|veena|zira|aria|jenny|sonia|libby|natasha|google uk english female|google us english/i;
-    const maleHints = /male|daniel|alex|fred|oliver|arthur|thomas|david|mark|guy|ryan|christopher|eric|roger|google uk english male/i;
+    const langPrefix = (settings.lang || 'en-US').toLowerCase();
+    const genderHints = settings.gender === 'female' ? femaleHints : maleHints;
+    const oppositeHints = settings.gender === 'female' ? /\bmale\b|google uk english male/i : /female/i;
 
-    const langMatches = pool.filter((v) => v.lang.toLowerCase().startsWith(langPrefix));
-    const searchPool = langMatches.length ? langMatches : pool;
+    const score = (v) => {
+      let s = 0;
+      if (v.localService === false) s += 40; // cloud neural voices
+      if (neuralHints.test(v.name)) s += 30;
+      if (genderHints.test(v.name)) s += 20;
+      if (oppositeHints.test(v.name) && !genderHints.test(v.name.replace(/female/i, ''))) s -= 25;
+      if (v.lang.toLowerCase().startsWith(langPrefix)) s += 10;
+      return s;
+    };
 
-    if (settings.gender === 'female') {
-      const fMatch = searchPool.find((v) => femaleHints.test(v.name));
-      if (fMatch) return fMatch;
-    } else {
-      const mMatch = searchPool.find((v) => maleHints.test(v.name));
-      if (mMatch) return mMatch;
-    }
-    return searchPool[0] || pool[0];
+    return [...pool].sort((a, b) => score(b) - score(a))[0] || null;
   };
 
-  const speakSingleUtterance = (text, person, catId, activeKey, onDone) => {
+  const speakWithBrowserVoice = (text, settings, onDone) => {
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       alert('Text-to-speech is not supported in this browser.');
+      if (onDone) onDone();
       return;
     }
-
-    const settings = getThinkerSpeechSettings(person, catId);
     const utterance = new SpeechSynthesisUtterance(text);
     const chosenVoice = pickBestVoice(settings);
     if (chosenVoice) {
@@ -113,22 +146,73 @@ export default function App() {
     } else {
       utterance.lang = settings.lang || 'en-US';
     }
-    utterance.pitch = settings.pitch || 1.0;
+    // Always 1.0 pitch: pitch-shifting is what makes browser voices sound tinny/metallic
+    utterance.pitch = 1.0;
     utterance.rate = settings.rate || 1.0;
-
     utterance.onend = () => {
-      if (!isCancelledRef.current && onDone) {
-        onDone();
-      }
+      if (!isCancelledRef.current && onDone) onDone();
     };
     utterance.onerror = () => {
-      if (!isCancelledRef.current && onDone) {
-        onDone();
-      }
+      if (!isCancelledRef.current && onDone) onDone();
     };
-
-    setSpeakingKey(activeKey);
     window.speechSynthesis.speak(utterance);
+  };
+
+  // Fetch lifelike Gemini neural audio (same voice family as Gemini Live)
+  const fetchGeminiAudio = async (text, voiceName) => {
+    const cacheKey = `${voiceName}::${text}`;
+    if (ttsCacheRef.current.has(cacheKey)) return ttsCacheRef.current.get(cacheKey);
+    const res = await fetch('/api/tts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text, voiceName })
+    });
+    if (!res.ok) throw new Error(`TTS HTTP ${res.status}`);
+    const data = await res.json();
+    if (!data.audioDataUrl) throw new Error('No audio returned');
+    ttsCacheRef.current.set(cacheKey, data.audioDataUrl);
+    return data.audioDataUrl;
+  };
+
+  const speakSingleUtterance = async (text, person, catId, activeKey, onDone) => {
+    const settings = getThinkerSpeechSettings(person, catId);
+    setSpeakingKey(activeKey);
+    const version = ++requestVersionRef.current;
+
+    if (geminiTtsAvailableRef.current && settings.geminiVoice && typeof Audio !== 'undefined') {
+      // Reuse a single audio element and "unlock" it synchronously during the click,
+      // so Safari/iOS allow playback once the Gemini audio arrives a few seconds later.
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+        audioRef.current.src = SILENT_WAV;
+        audioRef.current.play().catch(() => {});
+      }
+      const audio = audioRef.current;
+      try {
+        setVoiceLoadingKey(activeKey);
+        const audioUrl = await fetchGeminiAudio(text, settings.geminiVoice);
+        if (isCancelledRef.current || version !== requestVersionRef.current) return;
+        setVoiceLoadingKey(null);
+        audio.onended = () => {
+          if (!isCancelledRef.current && version === requestVersionRef.current && onDone) onDone();
+        };
+        audio.onerror = null;
+        audio.src = audioUrl;
+        audio.playbackRate = settings.rate || 1.0;
+        await audio.play();
+        return;
+      } catch (err) {
+        // If the serverless TTS route is unavailable (e.g. standalone GitHub Pages), stop retrying it
+        if (/HTTP (404|405|500)/.test(String(err && err.message))) {
+          geminiTtsAvailableRef.current = false;
+        }
+        setVoiceLoadingKey(null);
+        if (isCancelledRef.current || version !== requestVersionRef.current) return;
+      }
+    }
+
+    setVoiceLoadingKey(null);
+    speakWithBrowserVoice(text, settings, onDone);
   };
 
   const handleToggleSpeakCard = (catId, entry, isExpanded, question) => {
@@ -762,7 +846,12 @@ export default function App() {
                                   : 'bg-white/90 hover:bg-white text-slate-800 border-stone-300/90 hover:border-amber-400'
                               }`}
                             >
-                              {isSpeakingCard ? (
+                              {isSpeakingCard && voiceLoadingKey === cat.id ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Loading voice…</span>
+                                </>
+                              ) : isSpeakingCard ? (
                                 <>
                                   <VolumeX className="w-3.5 h-3.5" />
                                   <span>Stop</span>

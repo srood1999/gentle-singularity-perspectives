@@ -812,11 +812,8 @@ function hashString(str) {
  * so each thinker sounds natural and distinct when spoken aloud.
  */
 export function getThinkerSpeechSettings(person, categoryKey) {
-  if (THINKER_PERSONA_PROFILES[person.name]?.voice) {
-    return THINKER_PERSONA_PROFILES[person.name].voice;
-  }
   const femaleNames = new Set([
-    'Lisa Su', 'Fei-Fei Li', 'Audrey Tang', 'Daphne Koller', ' Helen Toner', 'Helen Toner',
+    'Lisa Su', 'Fei-Fei Li', 'Audrey Tang', 'Daphne Koller', 'Helen Toner',
     'Hannah Ritchie', 'Chip Huyen', 'Cassie Kozyrkov', 'Daniela Rus', 'Regina Barzilay',
     'Alondra Nelson', 'Rumman Chowdhury', 'Shoshana Zuboff', 'Timnit Gebru', 'Meredith Whittaker',
     'Cathy O’Neil', 'Joy Buolamwini', 'Kate Crawford', 'Emily M. Bender', 'Liv Boeree',
@@ -829,21 +826,32 @@ export function getThinkerSpeechSettings(person, categoryKey) {
     'Toby Ord', 'Liv Boeree', 'Huw Price', 'Filippa Lentzos', 'Bertrand Russell', 'Alan Watts',
     'John Locke', 'David Hume', 'John Stuart Mill', 'Thomas Hobbes', 'Paul Dirac', 'Emad Mostaque'
   ]);
-  const h = hashString(person.name);
-  const isFemale = femaleNames.has(person.name);
-  const isGB = britishOrCommonwealth.has(person.name) || categoryKey === 'philosopher' && (h % 3 === 0);
-  const basePitch = isFemale ? 1.08 + ((h % 9) - 4) * 0.015 : 0.94 + ((h % 9) - 4) * 0.015;
-  const baseRate = categoryKey === 'philosopher'
-    ? 0.92 + (h % 5) * 0.015
-    : categoryKey === 'accelerationist'
-      ? 1.01 + (h % 5) * 0.015
-      : 0.97 + (h % 5) * 0.015;
 
+  const h = hashString(person.name);
+  const profileVoice = THINKER_PERSONA_PROFILES[person.name]?.voice;
+  const isFemale = profileVoice ? profileVoice.gender === 'female' : femaleNames.has(person.name);
+  const isGB = profileVoice
+    ? profileVoice.lang === 'en-GB'
+    : britishOrCommonwealth.has(person.name) || (categoryKey === 'philosopher' && h % 2 === 0);
+
+  const femaleGeminiVoices = ['Aoede', 'Kore', 'Zephyr'];
+  const maleTechGeminiVoices = ['Puck', 'Fenrir', 'Orus', 'Charon'];
+  const malePhilGeminiVoices = ['Charon', 'Orus', 'Fenrir', 'Puck'];
+
+  const geminiVoice = isFemale
+    ? femaleGeminiVoices[h % femaleGeminiVoices.length]
+    : categoryKey === 'philosopher'
+      ? malePhilGeminiVoices[h % malePhilGeminiVoices.length]
+      : maleTechGeminiVoices[h % maleTechGeminiVoices.length];
+
+  // Keep pitch at 1.0 so browser neural voices never suffer from metallic pitch-shifting artifacts
   return {
     lang: isGB ? 'en-GB' : 'en-US',
-    pitch: Number(basePitch.toFixed(2)),
-    rate: Number(baseRate.toFixed(2)),
-    gender: isFemale ? 'female' : 'male'
+    pitch: 1.0,
+    rate: categoryKey === 'philosopher' ? 0.97 : 1.0,
+    gender: isFemale ? 'female' : 'male',
+    geminiVoice,
+    voiceSeed: h
   };
 }
 

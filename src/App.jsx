@@ -40,24 +40,21 @@ export default function App() {
   // Sample questions state: Top 2 = Last 10 Days Tech (refreshed on page load), Bottom 2 = Philosophical & Spiritual
   const [sampleQuestions, setSampleQuestions] = useState(SUGGESTED_QUESTIONS);
 
-  useEffect(() => {
-    let active = true;
-    fetchLiveTenDayTechQuestions().then((liveQuestions) => {
-      if (active && Array.isArray(liveQuestions) && liveQuestions.length === 4) {
-        setSampleQuestions(liveQuestions);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
+  // Track which of the 4 cards are currently refining with live Gemini search
+  const [refiningCards, setRefiningCards] = useState({
+    accelerationist: false,
+    pragmatist: false,
+    pessimist: false,
+    philosopher: false
+  });
 
   // Track which of the 4 cards have their "Expand Your Reasoning More" section open: key = catId
   const [expandedCards, setExpandedCards] = useState({});
 
-  // Track active Text-to-Speech playback: key = catId or 'all' or null
+  // Track active Text-to-Speech playback: key = catId or null
   const [speakingKey, setSpeakingKey] = useState(null);
   const isCancelledRef = useRef(false);
+  const requestVersionRef = useRef(0);
 
   // Stop speech on unmount
   useEffect(() => {
@@ -186,11 +183,12 @@ export default function App() {
     runStep(0);
   };
 
-  const buildAnswerEntry = (catId, person, question) => ({
+  const buildAnswerEntry = (catId, person, question, isLiveGrounded = false) => ({
     person,
     text: synthesizeThinkerResponse(catId, person, question),
     expandedParagraphs: synthesizeExpandedReasoning(catId, person, question),
-    sources: getThinkerSources(person)
+    sources: getThinkerSources(person),
+    isLiveGrounded
   });
 
   // Single Active Comparison on Screen (no stacked old questions below)
@@ -248,7 +246,8 @@ export default function App() {
     setExpandedCards(next);
   };
 
-  const queryVoiceOrFallback = async (person, catId, question, fallbackFn) => {
+  // Query live Gemini with Google Search grounding (supports rolling gemini-flash-latest + dynamic /api/chat discovery)
+  const queryLiveGemini = async (person, catId, question) => {
     const systemPrompt = buildThinkerSystemPrompt(person, catId);
     const payload = {
       contents: [{ role: 'user', parts: [{ text: question }] }],
@@ -256,11 +255,33 @@ export default function App() {
       tools: [{ googleSearch: {} }]
     };
 
+    // 1. Try Vercel serverless endpoint /api/chat first (uses dynamic model discovery + GEMINI_API_KEY)
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data?.text) return data.text;
+      }
+    } catch {
+      // Fall through to client-side key if present
+    }
+
+    // 2. Try client-side VITE_GEMINI_API_KEY if configured
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY || '';
-    const preferredModel = import.meta.env.VITE_GEMINI_MODEL || 'gemini-3.7-flash';
+    const preferredModel = import.meta.env.VITE_GEMINI_MODEL || 'gemini-flash-latest';
     if (apiKey) {
       const models = Array.from(
-        new Set([preferredModel, 'gemini-3.7-flash', 'gemini-2.5-flash', 'gemini-2.0-flash'])
+        new Set([
+          preferredModel,
+          'gemini-flash-latest',
+          'gemini-3.7-flash',
+          'gemini-2.5-flash',
+          'gemini-2.0-flash'
+        ])
       );
       for (const modelName of models) {
         try {
@@ -276,28 +297,82 @@ export default function App() {
             if (txt) return txt;
           }
         } catch {
-          // Try next model or serverless route
+          // Try next model
         }
       }
     }
 
-    // Try Vercel serverless endpoint /api/chat if available
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.text) return data.text;
-      }
-    } catch {
-      // Fallback to deep persona synthesis engine
-    }
-
-    return fallbackFn();
+    return null;
   };
+
+  // Helper to refine all 4 cards in the background with live Gemini search
+  const refineAllFourWithLiveSearch = async (question, peopleByCat, versionId) => {
+    setRefiningCards({
+      accelerationist: true,
+      pragmatist: true,
+      pessimist: true,
+      philosopher: true
+    });
+
+    for (let i = 0; i < CATEGORIES.length; i++) {
+      if (requestVersionRef.current !== versionId) return;
+      const cat = CATEGORIES[i];
+      const person = peopleByCat[cat.id];
+
+      const liveReply = await queryLiveGemini(person, cat.id, question);
+      if (requestVersionRef.current !== versionId) return;
+
+      setRefiningCards((prev) => ({ ...prev, [cat.id]: false }));
+
+      if (liveReply) {
+        setActiveComparison((prev) => {
+          if (prev.question !== question || prev.answers[cat.id]?.person?.id !== person.id) {
+            return prev;
+          }
+          return {
+            ...prev,
+            answers: {
+              ...prev.answers,
+              [cat.id]: {
+                ...prev.answers[cat.id],
+                text: liveReply,
+                isLiveGrounded: true
+              }
+            }
+          };
+        });
+        if (i < CATEGORIES.length - 1) {
+          await new Promise((r) => setTimeout(r, 1100));
+        }
+      }
+    }
+  };
+
+  // On initial mount: fetch live 10-day tech questions AND refine initial 4 cards with live Gemini search
+  useEffect(() => {
+    let active = true;
+    fetchLiveTenDayTechQuestions().then((liveQuestions) => {
+      if (active && Array.isArray(liveQuestions) && liveQuestions.length === 4) {
+        setSampleQuestions(liveQuestions);
+      }
+    });
+
+    const initialVersion = ++requestVersionRef.current;
+    refineAllFourWithLiveSearch(
+      SUGGESTED_QUESTIONS[0],
+      {
+        accelerationist: TOP_50_ACCELERATIONISTS[0],
+        pragmatist: TOP_50_PRAGMATISTS[0],
+        pessimist: TOP_50_PESSIMISTS[0],
+        philosopher: TOP_100_PHILOSOPHERS[0]
+      },
+      initialVersion
+    );
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleSelectDropdown = async (catId, newPersonId) => {
     stopSpeaking();
@@ -309,17 +384,20 @@ export default function App() {
     const person = getPersonById(catId, newPersonId);
     const currentQuestion = activeComparison.question;
 
-    // Immediately show the rich persona synthesis so the UI feels instant
+    // Stage 1: Immediately show the local persona response + "Refining with live Gemini search..." badge
     setActiveComparison((prev) => ({
       ...prev,
       answers: {
         ...prev.answers,
-        [catId]: buildAnswerEntry(catId, person, prev.question)
+        [catId]: buildAnswerEntry(catId, person, prev.question, false)
       }
     }));
+    setRefiningCards((prev) => ({ ...prev, [catId]: true }));
 
-    // Also query live Gemini with Google Search grounding if configured
-    const liveReply = await queryVoiceOrFallback(person, catId, currentQuestion, () => null);
+    // Stage 2: Query live Gemini with Google Search grounding
+    const liveReply = await queryLiveGemini(person, catId, currentQuestion);
+    setRefiningCards((prev) => ({ ...prev, [catId]: false }));
+
     if (liveReply) {
       setActiveComparison((prev) => {
         if (prev.question !== currentQuestion) return prev;
@@ -330,7 +408,8 @@ export default function App() {
             ...prev.answers,
             [catId]: {
               ...prev.answers[catId],
-              text: liveReply
+              text: liveReply,
+              isLiveGrounded: true
             }
           }
         };
@@ -359,34 +438,15 @@ export default function App() {
     setActiveComparison({
       question: q,
       answers: {
-        accelerationist: buildAnswerEntry('accelerationist', nextMap.accelerationist, q),
-        pragmatist: buildAnswerEntry('pragmatist', nextMap.pragmatist, q),
-        pessimist: buildAnswerEntry('pessimist', nextMap.pessimist, q),
-        philosopher: buildAnswerEntry('philosopher', nextMap.philosopher, q)
+        accelerationist: buildAnswerEntry('accelerationist', nextMap.accelerationist, q, false),
+        pragmatist: buildAnswerEntry('pragmatist', nextMap.pragmatist, q, false),
+        pessimist: buildAnswerEntry('pessimist', nextMap.pessimist, q, false),
+        philosopher: buildAnswerEntry('philosopher', nextMap.philosopher, q, false)
       }
     });
 
-    // If live Gemini is available, upgrade each of the 4 randomized voices
-    for (const cat of CATEGORIES) {
-      const person = nextMap[cat.id];
-      const liveReply = await queryVoiceOrFallback(person, cat.id, q, () => null);
-      if (liveReply) {
-        setActiveComparison((prev) => {
-          if (prev.question !== q || prev.answers[cat.id]?.person?.id !== person.id) return prev;
-          return {
-            ...prev,
-            answers: {
-              ...prev.answers,
-              [cat.id]: {
-                ...prev.answers[cat.id],
-                text: liveReply
-              }
-            }
-          };
-        });
-        await new Promise((r) => setTimeout(r, 1200));
-      }
-    }
+    const versionId = ++requestVersionRef.current;
+    await refineAllFourWithLiveSearch(q, nextMap, versionId);
   };
 
   const submitQuestion = async (questionOverride) => {
@@ -395,36 +455,39 @@ export default function App() {
 
     stopSpeaking();
     setInputText('');
-    setIsLoading(true);
     setError(null);
     setExpandedCards({});
 
-    try {
-      const answers = {};
-      const hasApiKey = Boolean(import.meta.env.VITE_GEMINI_API_KEY);
-      for (let i = 0; i < CATEGORIES.length; i++) {
-        const cat = CATEGORIES[i];
-        const person = getPersonById(cat.id, selectedFour[cat.id]);
-        const reply = await queryVoiceOrFallback(person, cat.id, q, () =>
-          synthesizeThinkerResponse(cat.id, person, q)
-        );
-        answers[cat.id] = {
-          person,
-          text: reply,
-          expandedParagraphs: synthesizeExpandedReasoning(cat.id, person, q),
-          sources: getThinkerSources(person)
-        };
-        if (hasApiKey && i < CATEGORIES.length - 1) {
-          await new Promise((r) => setTimeout(r, 1200));
-        }
+    const peopleMap = {
+      accelerationist: getPersonById('accelerationist', selectedFour.accelerationist),
+      pragmatist: getPersonById('pragmatist', selectedFour.pragmatist),
+      pessimist: getPersonById('pessimist', selectedFour.pessimist),
+      philosopher: getPersonById('philosopher', selectedFour.philosopher)
+    };
+
+    // Stage 1: Immediately display the new question with baseline persona responses
+    setActiveComparison({
+      question: q,
+      answers: {
+        accelerationist: buildAnswerEntry('accelerationist', peopleMap.accelerationist, q, false),
+        pragmatist: buildAnswerEntry('pragmatist', peopleMap.pragmatist, q, false),
+        pessimist: buildAnswerEntry('pessimist', peopleMap.pessimist, q, false),
+        philosopher: buildAnswerEntry('philosopher', peopleMap.philosopher, q, false)
       }
-      // Replace the active comparison so only the current question & answers are on screen
-      setActiveComparison({ question: q, answers });
+    });
+
+    // Stage 2: Refine all 4 cards with live Gemini search
+    const versionId = ++requestVersionRef.current;
+    setIsLoading(true);
+    try {
+      await refineAllFourWithLiveSearch(q, peopleMap, versionId);
     } catch (err) {
       console.error(err);
-      setError('Failed to get a response. Please try again.');
+      setError('Failed to refine responses with live search.');
     } finally {
-      setIsLoading(false);
+      if (requestVersionRef.current === versionId) {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -535,14 +598,13 @@ export default function App() {
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 placeholder="Ask any question to compare the 4 selected voices side by side..."
-                disabled={isLoading}
-                className="w-full bg-[#FAF8F5] border-2 border-stone-300 focus:bg-white focus:border-amber-600 focus:ring-2 focus:ring-amber-100 rounded-2xl py-3.5 pl-5 pr-32 text-sm sm:text-base text-slate-900 shadow-inner transition-all duration-200 disabled:opacity-50 focus:outline-none"
+                className="w-full bg-[#FAF8F5] border-2 border-stone-300 focus:bg-white focus:border-amber-600 focus:ring-2 focus:ring-amber-100 rounded-2xl py-3.5 pl-5 pr-32 text-sm sm:text-base text-slate-900 shadow-inner transition-all duration-200 focus:outline-none"
               />
               <button
                 type="submit"
-                disabled={!inputText.trim() || isLoading}
+                disabled={!inputText.trim()}
                 className={`absolute right-2 px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all duration-200 flex items-center gap-1.5 ${
-                  inputText.trim() && !isLoading
+                  inputText.trim()
                     ? 'bg-slate-900 hover:bg-slate-800 text-white shadow-sm'
                     : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                 }`}
@@ -563,9 +625,8 @@ export default function App() {
                   <button
                     key={i}
                     type="button"
-                    disabled={isLoading}
                     onClick={() => submitQuestion(q)}
-                    className={`text-left text-xs border px-3.5 py-2 rounded-xl shadow-sm transition-all disabled:opacity-50 ${
+                    className={`text-left text-xs border px-3.5 py-2 rounded-xl shadow-sm transition-all ${
                       activeComparison.question === q
                         ? 'bg-amber-50 text-amber-950 border-amber-400 font-semibold'
                         : 'bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-950 border-stone-200/90 hover:border-amber-300'
@@ -582,15 +643,6 @@ export default function App() {
         {/* Single Active Question & 4 Side-by-Side Answers */}
         <main className="flex-1 px-4 sm:px-8 py-6">
           <div className="max-w-7xl mx-auto space-y-6">
-            {isLoading && (
-              <div className="flex justify-center py-4">
-                <div className="bg-white border border-stone-300 rounded-full px-5 py-2.5 shadow-sm flex items-center gap-2 text-sm text-slate-700">
-                  <Loader2 className="w-4 h-4 animate-spin text-amber-700" />
-                  Generating authentic side-by-side responses...
-                </div>
-              </div>
-            )}
-
             {error && (
               <div className="flex justify-center my-4">
                 <div className="bg-red-50 text-red-700 px-4 py-2 rounded-full text-sm flex items-center gap-2 shadow-sm border border-red-200">
@@ -661,6 +713,7 @@ export default function App() {
                   if (!entry) return null;
                   const isExpanded = !!expandedCards[cat.id];
                   const isSpeakingCard = speakingKey === cat.id;
+                  const isRefining = !!refiningCards[cat.id];
                   const expandedParagraphs =
                     entry.expandedParagraphs ||
                     synthesizeExpandedReasoning(cat.id, entry.person, activeComparison.question);
@@ -730,8 +783,21 @@ export default function App() {
                           </p>
                         </div>
 
-                        {/* Lifelike First-Person Response + Expand Your Reasoning More Button */}
+                        {/* Lifelike First-Person Response + Live Gemini Search Status Indicator */}
                         <div className="p-4 sm:p-5 space-y-3.5">
+                          {isRefining && (
+                            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200/90 text-[11px] font-medium text-amber-900">
+                              <Loader2 className="w-3 h-3 animate-spin text-amber-700 flex-shrink-0" />
+                              <span>Refining with live Gemini search...</span>
+                            </div>
+                          )}
+                          {!isRefining && entry.isLiveGrounded && (
+                            <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-emerald-50/90 border border-emerald-200/80 text-[11px] font-medium text-emerald-800">
+                              <Sparkles className="w-3 h-3 text-emerald-600 flex-shrink-0" />
+                              <span>Grounded with live Gemini search</span>
+                            </div>
+                          )}
+
                           <p className="text-sm leading-relaxed text-slate-800">
                             {entry.text}
                           </p>

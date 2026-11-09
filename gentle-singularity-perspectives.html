@@ -344,19 +344,20 @@ const CATEGORIES = [
 ];
 
 // Default 4 Sample Questions:
-// - Top 2: Hyper-relevant to predominant technology topics from the last 10 days
-// - Bottom 2: Deep philosophical & spiritual questions tailored to include the 4th pillar
+// - #1 (Default Active Question): Philosophical & existential question reflecting the core concerns of the majority of Americans
+// - #2: Deep philosophical & spiritual question on consciousness, wisdom, and the soul
+// - #3 & #4: Hyper-relevant to predominant technology topics from the last 10 days (refreshed dynamically)
 const SUGGESTED_QUESTIONS = [
+  'As AI and automation begin outperforming humans in nearly every job and skill, what happens to human dignity, purpose, and the American Dream—and how do we keep our humanity, communities, and sense of meaning intact?',
+  'What is the ultimate nature of consciousness and wisdom—and can a silicon machine ever possess an inner life, moral conscience, or a soul?',
   'As lawmakers and activists call for pauses on gigawatt AI datacenters over grid strain, should we fast-track nuclear and off-grid power or cap frontier cluster expansion?',
-  'With autonomous AI coworkers and payment agents rolling out alongside enterprise "AI Kill Switches," how much real-world authority should we hand over to AI agents?',
-  'If AI and humanoid robots solve material scarcity and physical labor, where will human beings find authentic meaning, struggle, and spiritual purpose?',
-  'What is the ultimate nature of consciousness and wisdom—and can a silicon machine ever possess an inner life, moral conscience, or a soul?'
+  'With autonomous AI coworkers and payment agents rolling out alongside enterprise "AI Kill Switches," how much real-world authority should we hand over to AI agents?'
 ];
 
 /**
  * Dynamically checks the predominant tech/AI stories from the last 10 days
- * prior to when the user loads the page, updating the top 2 sample questions
- * while keeping the bottom 2 philosophical/spiritual questions anchored.
+ * prior to when the user loads the page, keeping the top 2 philosophical/existential
+ * questions anchored (with #1 as the default Active Question) while updating #3 and #4.
  */
 async function fetchLiveTenDayTechQuestions() {
   const tenDaysAgoUnix = Math.floor(Date.now() / 1000) - 10 * 86400;
@@ -371,14 +372,14 @@ async function fetchLiveTenDayTechQuestions() {
       const topic1 = cleanTitle(hits[0].title);
       const topic2 = cleanTitle(hits[1].title);
       return [
+        SUGGESTED_QUESTIONS[0],
+        SUGGESTED_QUESTIONS[1],
         `In light of this week’s debate around "${topic1}", should we accelerate frontier deployment or enforce stricter guardrails?`,
-        `With "${topic2}" dominating recent tech headlines, does this trajectory strengthen human agency or concentrate systemic risk?`,
-        SUGGESTED_QUESTIONS[2],
-        SUGGESTED_QUESTIONS[3]
+        `With "${topic2}" dominating recent tech headlines, does this trajectory strengthen human agency or concentrate systemic risk?`
       ];
     }
   } catch {
-    // Fallback cleanly to default 10-day + philosophical questions when offline or sandboxed
+    // Fallback cleanly to default questions when offline or sandboxed
   }
   return SUGGESTED_QUESTIONS;
 }
